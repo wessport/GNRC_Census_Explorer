@@ -1,0 +1,116 @@
+---
+title: "Introduction to tidycensus in R"
+author: "Wes Porter"
+date: "April 6, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Working with Census Data in R via tidycensus package
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(tidycensus)
+library(tidyverse)
+library(tigris)
+tigris_cache_dir("C:/Users/wPorter/Data/Census/tigris_cache")
+library(sf)
+library(ggplot2)
+options(tigris_class = "sf")
+options(tigris_use_cache = TRUE)
+Sys.getenv("CENSUS_API_KEY")
+```
+
+
+```{r include=FALSE}
+m90 <- get_decennial(geography = "state", variables = "H043A001", year = 1990)
+
+head(m90)
+
+```
+
+
+
+```{r, visualize}
+# Plot of median gross rent by state in 1990
+m90 %>%
+  ggplot(aes(x = value, y = reorder(NAME, value))) + 
+  geom_point() + 
+  labs(title = "Gross Median Rent by State",
+       subtitle = "1990 Decennial Survey",
+       y ='')
+
+```
+
+
+```{r, variables}
+
+v15 <- load_variables(2016, "acs5", cache = TRUE)
+
+```
+
+
+```{r, TN income}
+tn <- get_acs(geography = 'county', variables = c(medincome = "B19013_001"), state = 'TN')
+
+tn
+
+```
+
+
+```{r, moe}
+gnr <- c("Cheatham", "Davidson", "Dickson", "Houston", "Humphreys", "Montgomery", "Robertson", "Rutherford", "Stewart", "Sumner", "Trousdale", "Williamson", "Wilson")
+
+tn %>%
+  mutate(NAME = gsub(" County, Tennessee", "", NAME)) %>%
+  filter(NAME %in% gnr) %>%
+  ggplot(aes(x = estimate, y = reorder(NAME, estimate))) +
+  geom_errorbarh(aes(xmin = estimate - moe, xmax = estimate + moe)) +
+  geom_point(color = "red", size = 3) +
+  labs(title = "Household income in Greater Nashville Region by county in GNR",
+       subtitle = "2012-2016 American Community Survey",
+       y = "",
+       x = "ACS estimate (bars represent margin of error)")
+```
+
+
+
+
+```{r, rent data}
+rent <- get_acs(geography = 'tract', variables = 'DP04_0134', state = 'TN', geometry = TRUE)
+
+
+```
+
+
+
+
+```{r}
+cb <- core_based_statistical_areas(cb = TRUE)
+
+metros <- filter(cb, GEOID == "34980") %>% select(metro_name = NAME) 
+
+
+wc_rent <- st_join(rent, metros, join = st_within, left = FALSE) 
+
+head(wc_rent)
+```
+
+
+
+```{r, map}
+library(viridis)
+
+ggplot(wc_rent) +
+  geom_sf(aes(fill = estimate)) + 
+  scale_fill_viridis("estimate") +
+  #ggtitle("Median Rent in Greater Nashville Metropolitan Area") +
+  labs(title = "Median Rent in Greater Nashville Metropolitan Area",
+       subtitle = "2012-2016 American Community Survey") +
+  theme_bw()
+
+
+```
+

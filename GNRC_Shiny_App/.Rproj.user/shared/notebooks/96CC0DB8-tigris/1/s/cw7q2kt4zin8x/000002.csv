@@ -1,0 +1,7 @@
+"0","library(tigris)"
+"0","tigris_cache_dir(""C:/Users/wPorter/Data/Census/tigris_cache"")"
+"0","library(sf)"
+"0","library(tidyverse)"
+"0","library(ggplot2)"
+"0","options(tigris_class = ""sf"")"
+"0","options(tigris_use_cache = TRUE)"

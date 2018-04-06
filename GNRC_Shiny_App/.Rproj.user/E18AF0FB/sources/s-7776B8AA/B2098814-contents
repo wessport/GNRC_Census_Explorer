@@ -1,0 +1,104 @@
+---
+title: "Introduction to tigris in R"
+author: "Wes Porter"
+date: "April 6, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Working with Census Data in R via the tigris package
+
+Following Kyle Walker's guide, adapted for Nashville:
+https://walkerke.github.io/2017/05/tigris-metros/
+
+```{r libraries, message=FALSE, warning=FALSE}
+
+library(tigris)
+tigris_cache_dir("C:/Users/wPorter/Data/Census/tigris_cache")
+library(sf)
+library(tidyverse)
+library(ggplot2)
+options(tigris_class = "sf")
+options(tigris_use_cache = TRUE)
+
+```
+
+
+```{r, tracts}
+tnky <- rbind_tigris(
+  tracts("TN", cb = TRUE),
+  tracts("KY", cb = TRUE)
+  )
+
+ggplot(tnky) + geom_sf()
+```
+
+```{r, metro area}
+# Subset the TN-KY census tracts by locating the boundary of the Nashville Metropolitan area via the core based statistical area
+
+cb <- core_based_statistical_areas(cb = TRUE)
+
+pdx <- filter(cb, grepl("Nashville-Davidson--Murfreesboro--Franklin, TN", NAME))
+
+ggplot(pdx) + geom_sf()
+```
+
+
+```{r, spatial subset}
+# Returns all tracts that intersect the metropolitan area
+# Subsetting in sf via simple indexing 
+
+
+p1 <- tnky[pdx, ]
+
+ggplot() + 
+  geom_sf(data = p1) + 
+  geom_sf(data = pdx, fill = NA, color = 'red')
+
+```
+
+
+```{r, within}
+# Only want census tracts inside of our metropolitan boundary
+
+# Create binary list of tracts either in (1) or out (0)
+w1 <-  st_within(tnky, pdx)
+
+# Use purr to convert to a logical vector 
+w2 <- map_lgl(w1, function(x) {
+  if (length(x) == 1) {
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+})
+
+p2 <- tnky[w2,]
+
+ggplot() +
+  geom_sf(data = p2) + 
+  geom_sf(data = pdx, fill = NA, color = "red")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

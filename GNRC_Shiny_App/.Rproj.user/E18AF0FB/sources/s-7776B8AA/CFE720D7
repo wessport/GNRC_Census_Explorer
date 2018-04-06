@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1522960670751.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3114869265",
+    "id" : "CFE720D7",
+    "lastKnownWriteTime" : 1523045480,
+    "last_content_update" : 1523045480054,
+    "path" : "C:/Users/wPorter/GitHub/GNRC_Census_Explorer/GNRC_Shiny_App/app.R",
+    "project_path" : "app.R",
+    "properties" : {
+        "cursorPosition" : "64,0",
+        "scrollLine" : "28"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
