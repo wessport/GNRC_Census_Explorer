@@ -4,6 +4,7 @@
 # Community Census Data
 #
 # Developed by WES PORTER
+# 20 APR 2018
 #
 
 library(shiny)
@@ -13,9 +14,6 @@ library(magrittr)
 
 path = "C:/Users/wPorter/Data/Census/census_shapefiles/GNR/counties"
 gnr_2017 <- readOGR(path, layer = 'cb_2017_gnr_county')
-
-r_colors <- rgb(t(col2rgb(colors()) / 255))
-names(r_colors) <- colors()
 
 # UI ----------------------------------------------------------------
 
@@ -35,10 +33,6 @@ ui <- fluidPage(
 
 server <-  function(input, output, session){
   
-  points <- eventReactive(input$recalc, {
-    cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
-  }, ignoreNULL = FALSE)
-  
   output$mymap <- renderLeaflet({
     leaflet(gnr_2017) %>%
       addProviderTiles(providers$Stamen.TonerLite,
@@ -50,8 +44,7 @@ server <-  function(input, output, session){
                   stroke = T, 
                   color = "grey", 
                   opacity = 1,
-                  highlightOptions = highlightOptions(color = "white", weight = 2,
-                                        bringToFront = TRUE))
+                  highlightOptions = highlightOptions(color = "white", weight = 2,bringToFront = TRUE))
   })
 }
 

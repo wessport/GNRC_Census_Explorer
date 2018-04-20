@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1524248417118.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "65E40D94",
+    "lastKnownWriteTime" : 1524255728,
+    "last_content_update" : 1524255728197,
+    "path" : "C:/Users/wPorter/GitHub/GNRC_Census_Explorer/GNRC_Shiny_App/leaflet_app.R/leaflet_app.R",
+    "project_path" : "leaflet_app.R/leaflet_app.R",
+    "properties" : {
+        "cursorPosition" : "24,17",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
