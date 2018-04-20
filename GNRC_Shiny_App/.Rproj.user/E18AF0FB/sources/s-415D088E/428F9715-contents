@@ -1,0 +1,18 @@
+# WES PORTER
+# 6-Apr-2018
+# Requesting census data
+
+library(tidycensus)
+library(tidyverse)
+library(tigris)
+tigris_cache_dir("C:/Users/wPorter/Data/Census/tigris_cache")
+library(sf)
+library(ggplot2)
+options(tigris_class = "sf")
+options(tigris_use_cache = TRUE)
+Sys.getenv("CENSUS_API_KEY")
+
+# Get ACS data Age and Sex 2016
+williamson_acs <- get_acs(geography = "county", table = "B01001",
+                          state = "TN", county = "Williamson")
+

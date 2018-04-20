@@ -20,6 +20,7 @@ library(sf)
 library(ggplot2)
 options(tigris_class = "sf")
 options(tigris_use_cache = TRUE)
+census_api_key("6999d8d1e472e95e754d605f9a5646beec7eede5")
 Sys.getenv("CENSUS_API_KEY")
 ```
 

@@ -1,0 +1,14 @@
+library(leaflet)
+library(rgdal)
+library(magrittr)
+
+path = "C:/Users/wPorter/Data/Census/census_shapefiles/GNR/counties"
+
+r_colors <- rgb(t(col2rgb(colors()) / 255))
+
+names(r_colors) <- colors()
+
+cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
+
+
+gnr_2017 <- readOGR(path, layer = 'cb_2017_gnr_county')
