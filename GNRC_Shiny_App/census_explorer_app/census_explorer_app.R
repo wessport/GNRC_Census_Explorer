@@ -13,6 +13,7 @@ library(rgdal)
 library(magrittr)
 library(sf)
 library(tidyverse)
+library(htmltools)
 
 path = "C:/Users/wPorter/Data/Census/census_shapefiles/GNR/counties"
 gnr_2017 <- readOGR(path, layer = 'cb_2017_gnr_county')
@@ -75,6 +76,10 @@ ui <- fluidPage(
 
 server <-  function(input, output, session){
   
+  labels <- test$NAME
+  
+  c <- paste("<strong>", labels, "</strong>", sep ='')
+  
   output$mymap <- renderLeaflet({
     leaflet(test) %>%
       addProviderTiles(providers$Stamen.TonerLite,
@@ -86,7 +91,10 @@ server <-  function(input, output, session){
                   stroke = T, 
                   color = "grey", 
                   opacity = 1,
-                  highlightOptions = highlightOptions(color = "white", weight = 3,bringToFront = TRUE))
+                  dashArray = "3",
+                  highlight = highlightOptions(color = "white", weight = 3, bringToFront = TRUE),
+                  label = lapply(c,HTML)
+                  )
   })
   
   # output$myplot <- barplot(test$ALAND, main="Area Distribution", 

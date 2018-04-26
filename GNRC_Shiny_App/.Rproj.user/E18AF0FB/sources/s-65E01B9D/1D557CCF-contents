@@ -6,13 +6,6 @@ library(tidyverse)
 
 path = "C:/Users/wPorter/Data/Census/census_shapefiles/GNR/counties"
 
-r_colors <- rgb(t(col2rgb(colors()) / 255))
-
-names(r_colors) <- colors()
-
-cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
-
-
 gnr_2017 <- readOGR(path, layer = 'cb_2017_gnr_county')
 
 plot(gnr_2017)
@@ -24,3 +17,35 @@ plot(test$NAME, test$ALAND)
 
 barplot(test$ALAND, main="Area Distribution", 
         names.arg=test$NAME)
+
+
+labels <- test$NAME
+
+c <- paste("<strong>", labels, "</strong>", sep ='')
+
+leaflet(test) %>%
+  addProviderTiles(providers$Stamen.TonerLite,
+                   options = providerTileOptions(noWrap =TRUE)
+  ) %>%
+  addPolygons(fillColor = ~colorQuantile("YlOrRd", ALAND)(ALAND), 
+              fillOpacity = 0.5, 
+              weight = 2, 
+              stroke = T, 
+              color = "grey", 
+              opacity = 1,
+              dashArray = "3",
+              highlight = highlightOptions(color = "white", weight = 3, bringToFront = TRUE),
+              #label = labels
+              label = lapply(c,HTML)
+              )
+
+
+lableOptions = labelOptions(
+  style = list("font-weight" = "normal", padding = "3px 8px"),
+  textsize = "15px",
+  direction = "auto")
+
+
+
+
+
