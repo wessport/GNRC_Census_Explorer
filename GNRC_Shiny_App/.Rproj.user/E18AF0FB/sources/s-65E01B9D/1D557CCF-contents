@@ -1,0 +1,26 @@
+library(leaflet)
+library(rgdal)
+library(magrittr)
+library(sf)
+library(tidyverse)
+
+path = "C:/Users/wPorter/Data/Census/census_shapefiles/GNR/counties"
+
+r_colors <- rgb(t(col2rgb(colors()) / 255))
+
+names(r_colors) <- colors()
+
+cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
+
+
+gnr_2017 <- readOGR(path, layer = 'cb_2017_gnr_county')
+
+plot(gnr_2017)
+
+test <-  st_read(path, layer = 'cb_2017_gnr_county')
+
+
+plot(test$NAME, test$ALAND)
+
+barplot(test$ALAND, main="Area Distribution", 
+        names.arg=test$NAME)

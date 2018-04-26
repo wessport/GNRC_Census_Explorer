@@ -11,9 +11,14 @@ library(shiny)
 library(leaflet)
 library(rgdal)
 library(magrittr)
+library(sf)
+library(tidyverse)
 
 path = "C:/Users/wPorter/Data/Census/census_shapefiles/GNR/counties"
 gnr_2017 <- readOGR(path, layer = 'cb_2017_gnr_county')
+
+test <-  st_read(path, layer = 'cb_2017_gnr_county')
+
 
 # UI ----------------------------------------------------------------
 
@@ -28,7 +33,7 @@ ui <- fluidPage(
                information from the US Census."),
       
       sliderInput("yr", "Vintage:", min = 2011, max = 2017, value = c(2014, 2015), sep = '', dragRange = TRUE)
-    ),
+      ),
     
     mainPanel(
       leafletOutput("mymap")
@@ -42,31 +47,27 @@ ui <- fluidPage(
     
     column(3,
            h4("Plot/Graph 1")
-          ),
+    ),
     
     column(4, offset = 1,
            h4("Plot/Graph 2")
-           ),
-  
+    ),
+    
     column(4,
            h4("Plot/Graph 3")
-           )
     ),
-
+    plotOutput("myplot")
+  ),
+  
   hr(),
   
   fluidRow(
     column(2,
            "Table Sidebar"
-           ),
+    ),
     column(10,
            h4("Table"))
   )
-  
-  # sidebarLayout(
-  #   sidebarPanel("Hello im a sidebar"),
-  #   mainPanel(leafletOutput("mymap"))
-  #             )
 )
 
 
@@ -75,10 +76,10 @@ ui <- fluidPage(
 server <-  function(input, output, session){
   
   output$mymap <- renderLeaflet({
-    leaflet(gnr_2017) %>%
+    leaflet(test) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(noWrap =TRUE)
-                       ) %>%
+      ) %>%
       addPolygons(fillColor = ~colorQuantile("YlOrRd", ALAND)(ALAND), 
                   fillOpacity = 0.5, 
                   weight = 2, 
@@ -87,6 +88,10 @@ server <-  function(input, output, session){
                   opacity = 1,
                   highlightOptions = highlightOptions(color = "white", weight = 3,bringToFront = TRUE))
   })
+  
+  # output$myplot <- barplot(test$ALAND, main="Area Distribution", 
+  #                          names.arg=test$NAME)
 }
 
 shinyApp(ui, server)
+
