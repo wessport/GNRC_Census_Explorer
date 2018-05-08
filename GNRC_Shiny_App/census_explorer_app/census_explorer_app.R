@@ -15,7 +15,7 @@ library(sf)
 library(tidyverse)
 library(htmltools)
 
-path = "C:/Users/wPorter/Data/Census/census_shapefiles/GNR/counties"
+path = "C:/Users/wPorter/Data/Census/census_shapefiles/boundaries/GNR/counties"
 gnr_2017 <- readOGR(path, layer = 'cb_2017_gnr_county')
 
 test <-  st_read(path, layer = 'cb_2017_gnr_county')
@@ -81,11 +81,19 @@ server <-  function(input, output, session){
   c <- paste("<strong>", labels, "</strong>", sep ='')
   
   output$mymap <- renderLeaflet({
-    leaflet(test) %>%
-      addProviderTiles(providers$Stamen.TonerLite,
-                       options = providerTileOptions(noWrap =TRUE)
+    
+    map_var <- census_format[[3]]
+    
+    labels <- census_format$NAME
+    
+    c <- paste("<strong>", labels, "</strong>", sep ='')
+    
+    leaflet(census_format) %>%
+      addProviderTiles(providers$CartoDB.PositronNoLabels,
+                       options = providerTileOptions(noWrap =TRUE, zIndex = 1)
       ) %>%
-      addPolygons(fillColor = ~colorQuantile("YlOrRd", ALAND)(ALAND), 
+      addPolygons(group = "polygons",
+                  fillColor = ~colorQuantile("YlOrRd", map_var)(map_var), 
                   fillOpacity = 0.5, 
                   weight = 2, 
                   stroke = T, 
@@ -93,8 +101,12 @@ server <-  function(input, output, session){
                   opacity = 1,
                   dashArray = "3",
                   highlight = highlightOptions(color = "white", weight = 3, bringToFront = TRUE),
+                  options=list(zIndex = 2),
                   label = lapply(c,HTML)
-                  )
+      ) %>%
+      addProviderTiles("CartoDB.PositronOnlyLabels", group="labels", 
+                       options=providerTileOptions(zIndex = 3, pane = 'markerPane')) %>% 
+      addLayersControl(overlayGroups = c("polygons", "labels"))
   })
   
   # output$myplot <- barplot(test$ALAND, main="Area Distribution", 
