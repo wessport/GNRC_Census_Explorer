@@ -51,6 +51,22 @@ generate_DI <- function(di_data){
     mutate(total_hispanic_pop = total_pop_one_race - total_not_hisp_one_race) -> summary_di
   
   summary_di %>%
+    rowwise() %>%
+    mutate(Shellys_DI = ( 1 - 
+      sum(
+        (total_not_hisp_white - 1)*total_not_hisp_white,
+        (total_not_hisp_black - 1)*total_not_hisp_black,
+        (total_not_hisp_amer_ind - 1)*total_not_hisp_amer_ind,
+        (total_not_hisp_asian - 1)*total_not_hisp_asian,
+        (total_not_hisp_pacific - 1)*total_not_hisp_pacific,
+        (total_not_hisp_other - 1)*total_not_hisp_other,
+        (total_two_or_more - 1)*total_two_or_more,
+        (total_hispanic_pop - 1)*total_hispanic_pop
+      ) / ((total_pop - 1)*total_pop)
+    ))%>% 
+    select(NAME, Shellys_DI) -> Shellys_DI
+  
+  summary_di %>%
     gather(variable, value,-NAME) %>%
     group_by(NAME) %>%
     summarise(
@@ -218,13 +234,16 @@ generate_DI <- function(di_data){
       )
     ) -> Simpsons_DI
   
+  Simpsons_DI$Simpsons_DI[Simpsons_DI$Simpsons_DI == Inf] <- 1.0
+  
   di_data %>%
     select(NAME, geometry) %>%
     group_by(NAME) %>%
     distinct() %>%
+    right_join(Shellys_DI, by = c("NAME" = "NAME")) %>%
     right_join(Shannons_DI, by = c("NAME" = "NAME")) %>%
     right_join(Simpsons_DI, by = c("NAME" = "NAME")) %>%
-    select(NAME, Simpsons_DI, Shannons_DI, geometry) -> DI_geom
+    select(NAME, Shellys_DI, Simpsons_DI, Shannons_DI, geometry) -> DI_geom
   
   return(DI_geom)
 

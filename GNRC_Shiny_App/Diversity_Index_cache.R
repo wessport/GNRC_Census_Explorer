@@ -233,3 +233,33 @@ di_census_data <-
     geometry = TRUE
   )
 bg_di_2011 <- generate_DI(di_census_data)
+
+save(
+  county_di_2016,
+  county_di_2015,
+  county_di_2014,
+  county_di_2013,
+  county_di_2012,
+  county_di_2011,
+  file = "data/county_di.RData"
+)
+
+save(
+  tract_di_2016,
+  tract_di_2015,
+  tract_di_2014,
+  tract_di_2013,
+  tract_di_2012,
+  tract_di_2011,
+  file = "data/tract_di.RData"
+)
+
+save(
+  bg_di_2016,
+  bg_di_2015,
+  bg_di_2014,
+  bg_di_2013,
+  bg_di_2012,
+  bg_di_2011,
+  file = "data/bg_di.RData"
+)
