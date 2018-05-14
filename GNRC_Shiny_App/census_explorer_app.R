@@ -44,6 +44,7 @@ ui <- fluidPage(
         "select_category",
         label = h3("Category:"),
         choices = c(
+          "Please select an option below" = "",
           "Population" = "Pop",
           "Transportation" = "Tran",
           "Housing" = "Housing",
@@ -103,32 +104,44 @@ server <-  function(input, output, session){
   
   output$secondSelection <- renderUI({
     
-    if (input$select_category == 'Pop') {
-      selectInput("select_var", label = h3("Variable:"), c('Diversity Indices', 'b', 'c'))
+    if (input$select_category == ''){}
+    
+    else if (input$select_category == 'Pop') {
+      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Diversity Indices', 'b', 'c'))
     }
     
     else if (input$select_category == 'Tran') {
-      selectInput("select_var", label = h3("Variable:"), c('d', 'e', 'f'))
+      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'd', 'e', 'f'))
     }
 
     else if (input$select_category == 'Housing') {
-      selectInput("select_var", label = h3("Variable:"), c('g', 'h', 'i'))
+      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'g', 'h', 'i'))
     }
 
     else if (input$select_category == 'Health') {
-      selectInput("select_var", label = h3("Variable:"), c('j', 'k', 'l'))
+      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'j', 'k', 'l'))
     }
 
     else if (input$select_category == 'Emp') {
-      selectInput("select_var", label = h3("Variable:"), c('m', 'n', 'o'))
+      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'm', 'n', 'o'))
     }
     
   })
   
   output$thirdSelection <- renderUI({
     
-    if (input$select_var == 'Diversity Indices') {
-      selectInput("select_attr", label = h3("Attribute:"), c("Shelly's Diversity Index", "Simpson's DI", "Shannon's DI", "teeeeeeeeeeeeessssssssssssssssssssstttttttttttttttttttttttttttttttttttttttttttttttttttttt"))
+    if (input$select_category == ''){}
+    
+    else if (input$select_var == 'Diversity Indices') {
+      
+      attr <- colnames(county_di_2016)
+      attr[!attr %in% c("NAME","geometry")] 
+      
+      selectInput(
+        "select_attr",
+        label = h3("Attribute:"),
+        c("Please select an option below" = "", attr[!attr %in% c("NAME","geometry")])
+      )
     }
   })
   
@@ -139,7 +152,7 @@ server <-  function(input, output, session){
   
   output$mymap <- renderLeaflet({
     
-    map_var <- county_di_2016$Shellys_DI
+    map_var <- county_di_2016
     
     labels <- county_di_2016$NAME
     
@@ -150,7 +163,7 @@ server <-  function(input, output, session){
                        options = providerTileOptions(noWrap =TRUE, zIndex = 1)
       ) %>%
       addPolygons(group = "polygons",
-                  fillColor = ~colorQuantile("YlOrRd", map_var)(map_var), 
+                  fillColor = ~colorQuantile("YlOrRd", county_di_2016$Shellys_DI)(county_di_2016$Shellys_DI), 
                   fillOpacity = 0.5, 
                   weight = 2, 
                   stroke = T, 

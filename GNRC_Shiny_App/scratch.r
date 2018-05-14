@@ -177,4 +177,21 @@ test2 %>%
 
 
 
+attr <- colnames(county_di_2016)
+
+
+attr[!attr %in% c("NAME","geometry")] 
+
+c("Please select an option below" = "","a","b","c")
+
+a <- c("Please select an option below" = "")
+
+b <- c("a","b","c")
+
+c(a,b)
+
+attr <- colnames(county_di_2016)
+attr[!attr %in% c("NAME","geometry")]
+
+c("Please select an option below" = "", attr[!attr %in% c("NAME","geometry")])
 
