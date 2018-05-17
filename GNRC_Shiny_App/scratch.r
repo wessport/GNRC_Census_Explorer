@@ -195,3 +195,15 @@ attr[!attr %in% c("NAME","geometry")]
 
 c("Please select an option below" = "", attr[!attr %in% c("NAME","geometry")])
 
+
+
+# Removing geometry for labeling purposes
+
+county_di_2016 %>%
+  st_set_geometry(NULL) %>% 
+  pull("NAME") -> label
+
+county_di_2016 %>%
+  st_set_geometry(NULL) %>% 
+  ungroup() %>%
+  pull("Shellys_DI") -> map_var

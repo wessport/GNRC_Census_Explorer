@@ -15,13 +15,15 @@
 #                                                             #
 ###############################################################
 
-library(shiny)
+library(DT)
+library(htmltools)
 library(leaflet)
-library(rgdal)
 library(magrittr)
+library(rgdal)
+library(shiny)
 library(sf)
 library(tidyverse)
-library(htmltools)
+
 
 # Import data
 load("./data/county_di.RData")
@@ -38,7 +40,9 @@ ui <- fluidPage(
     sidebarPanel(
       
       helpText("Create demographic maps with 
-               information from the US Census."),
+               information from the US Census.",
+               p(),
+               "Begin by selecting a variable."),
       
       selectInput(
         "select_category",
@@ -57,13 +61,18 @@ ui <- fluidPage(
       
       uiOutput("thirdSelection")
       
+      # uiOutput("slider"),
       
-      # sliderInput("yr", "Vintage:", min = 2011, max = 2017, value = c(2014, 2015), sep = '', dragRange = TRUE)
+      
+      #sliderInput("yr", "Vintage:", min = 2011, max = 2017, value = c(2014, 2015), sep = '', dragRange = TRUE)
       
       ),
     
     mainPanel(
-      leafletOutput("mymap")
+      leafletOutput("mymap"),
+      
+      uiOutput("slider")
+      
     )
   ),
   
@@ -88,13 +97,10 @@ ui <- fluidPage(
   
   hr(),
   
-  fluidRow(
-    column(2,
-           "Table Sidebar"
-    ),
-    column(10,
-           h4("Table"))
-  )
+  uiOutput("dt")
+  
+  #textOutput("test")
+
 )
 
 
@@ -102,6 +108,7 @@ ui <- fluidPage(
 
 server <-  function(input, output, session){
   
+  # Dynamic Input Widgets
   output$secondSelection <- renderUI({
     
     if (input$select_category == ''){}
@@ -139,48 +146,132 @@ server <-  function(input, output, session){
       
       selectInput(
         "select_attr",
-        label = h3("Attribute:"),
+        label = h3("Map Attribute:"),
         c("Please select an option below" = "", attr[!attr %in% c("NAME","geometry")])
       )
     }
   })
   
+  output$slider <- renderUI({
+    
+    if (is.null(input$select_attr)){return(invisible())}
+    
+    else if (input$select_attr == ''){return(invisible())}
+    
+    else if(input$select_attr != '') {
+      
+      sliderInput("yr", "Vintage:", min = 2011, max = 2016, value = 2016, sep = '')
+      
+      }
+  })
   
+  # FIX ME ---------
   labels <- county_di_2016$NAME
   
   c <- paste("<strong>", labels, "</strong>", sep ='')
+  # ----------------
+  
+  # Map ------
   
   output$mymap <- renderLeaflet({
-    
-    map_var <- county_di_2016
-    
-    labels <- county_di_2016$NAME
-    
-    c <- paste("<strong>", labels, "</strong>", sep ='')
-    
-    leaflet(county_di_2016) %>%
-      addProviderTiles(providers$CartoDB.PositronNoLabels,
-                       options = providerTileOptions(noWrap =TRUE, zIndex = 1)
-      ) %>%
-      addPolygons(group = "polygons",
-                  fillColor = ~colorQuantile("YlOrRd", county_di_2016$Shellys_DI)(county_di_2016$Shellys_DI), 
-                  fillOpacity = 0.5, 
-                  weight = 2, 
-                  stroke = T, 
-                  color = "grey", 
-                  opacity = 1,
-                  dashArray = "3",
-                  highlight = highlightOptions(color = "white", weight = 3, bringToFront = TRUE),
-                  options=list(zIndex = 2),
-                  label = lapply(c,HTML)
-      ) %>%
-      addProviderTiles("CartoDB.PositronOnlyLabels", group="labels", 
-                       options=providerTileOptions(zIndex = 3, pane = 'markerPane')) %>% 
-      addLayersControl(overlayGroups = c("polygons", "labels"))
+    if (is.null(input$select_attr)) {
+      leaflet() %>%
+        setView(lat = 36.174465,
+                lng = -86.767960,
+                zoom = 8) %>%
+        addProviderTiles(providers$CartoDB.Positron,
+                         options = providerTileOptions(noWrap = TRUE, zIndex = 1))
+    } else if (input$select_attr == '') {
+      leaflet() %>%
+        setView(lat = 36.174465,
+                lng = -86.767960,
+                zoom = 8) %>%
+        addProviderTiles(providers$CartoDB.Positron,
+                         options = providerTileOptions(noWrap = TRUE, zIndex = 1))
+    }
+    else
+      
+    {
+      sel_col <- input$select_attr
+      
+      county_di_2016 %>%
+        st_set_geometry(NULL) %>% 
+        pull("NAME") -> label
+      
+      county_di_2016 %>%
+        st_set_geometry(NULL) %>% 
+        ungroup() %>%
+        pull(input$select_attr) %>%
+        round(digits = 3) -> map_var
+      
+      c <- paste("<strong>", labels, "</strong><br>",map_var, sep = '')
+      
+      leaflet(county_di_2016) %>%
+        addProviderTiles(providers$CartoDB.PositronNoLabels,
+                         options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
+        addPolygons(
+          group = "polygons",
+          fillColor = ~ colorQuantile("YlOrRd", map_var)(map_var),
+          fillOpacity = 0.5,
+          weight = 2,
+          stroke = T,
+          color = "grey",
+          opacity = 1,
+          dashArray = "3",
+          highlight = highlightOptions(
+            color = "white",
+            weight = 3,
+            bringToFront = TRUE
+          ),
+          options = list(zIndex = 2),
+          label = lapply(c, HTML)
+        ) %>%
+        addProviderTiles(
+          "CartoDB.PositronOnlyLabels",
+          group = "labels",
+          options = providerTileOptions(zIndex = 3, pane = 'markerPane')
+        ) %>%
+        addLayersControl(overlayGroups = c("polygons", "labels"))
+    }
   })
   
-  # output$myplot <- barplot(test$ALAND, main="Area Distribution", 
-  #                          names.arg=test$NAME)
+  output$data_table <-
+    DT::renderDataTable({
+      county_di_2016
+    }, options = list(columnDefs = list(list(
+      targets = ncol(county_di_2016),
+      render = JS(
+        "function(data, type, row, meta) {",
+        "return type === 'display' && data.toString().length > 6 ?",
+        "'<span title=\"' + data + '\">' + data.toString().substr(0, 6) + '...</span>' : data;",
+        "}"
+      )
+    ))))
+    
+  output$dt <- renderUI({
+    
+    if(is.null(input$select_var)){}
+    
+    else if (input$select_var == ''){}
+    
+    else {
+      
+      fluidRow(column(12), DT::dataTableOutput("data_table"))
+      
+    }
+    
+  })
+  
+# Test / Trouble shooting  
+  # output$test <- renderPrint({
+  #   county_di_2016 %>%
+  #     st_set_geometry(NULL) %>%
+  #     ungroup() %>%
+  #     select(input$select_attr) -> map_var
+  #   
+  #   map_var
+  # })
+  
 }
 
 shinyApp(ui, server)
