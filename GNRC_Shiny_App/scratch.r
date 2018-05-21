@@ -207,3 +207,62 @@ county_di_2016 %>%
   st_set_geometry(NULL) %>% 
   ungroup() %>%
   pull("Shellys_DI") -> map_var
+
+
+test %>%
+  filter(Vintage == 2015)-> test2
+
+
+leaflet(test2) %>%
+  addProviderTiles(providers$Stamen.TonerLite,
+                   options = providerTileOptions(noWrap =TRUE)
+  ) %>%
+  addPolygons(fillColor = ~colorQuantile("YlOrRd", Shellys_DI)(Shellys_DI), 
+              fillOpacity = 0.5, 
+              weight = 2, 
+              stroke = T, 
+              color = "grey", 
+              opacity = 1,
+              dashArray = "3",
+              highlight = highlightOptions(color = "white", weight = 3, bringToFront = TRUE)
+  )
+
+
+st_zm(county_di_2014,drop=TRUE, what ="ZM") -> county_di_2014
+
+
+##########
+
+
+
+leaflet(di) %>%
+  addProviderTiles(providers$CartoDB.PositronNoLabels,
+                   options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
+  addPolygons(
+    group = "county",
+    fillColor = ~ colorQuantile("YlOrRd", Shellys_DI)(Shellys_DI),
+    fillOpacity = 0.5,
+    weight = 2,
+    stroke = T,
+    color = "grey",
+    opacity = 1,
+    dashArray = "3",
+    highlight = highlightOptions(
+      color = "white",
+      weight = 3,
+      bringToFront = TRUE
+    ),
+    options = list(zIndex = 2),
+    label = lapply(c, HTML)
+  ) %>%
+  addProviderTiles(
+    "CartoDB.PositronOnlyLabels",
+    group = "labels",
+    options = providerTileOptions(zIndex = 3, pane = 'markerPane')
+  ) %>%
+  addLayersControl(overlayGroups = c("county", "labels"))
+
+
+
+di %>%
+  filter(Vintage == 2016 & Level == "county") 

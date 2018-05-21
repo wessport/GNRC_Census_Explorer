@@ -11,7 +11,7 @@
 #                                                             #
 #                http://shiny.rstudio.com/                    #
 #                                                             #
-#               Last Updated: 14-MAY-2018                     #
+#               Last Updated: 17-MAY-2018                     #
 #                                                             #
 ###############################################################
 
@@ -26,9 +26,10 @@ library(tidyverse)
 
 
 # Import data
-load("./data/county_di.RData")
-load("./data/tract_di.RData")
-load("./data/bg_di.RData")
+# load("./data/county_di.RData")
+# load("./data/tract_di.RData")
+# load("./data/bg_di.RData")
+load("./data/di.RData")
 
 # UI ----------------------------------------------------------------
 
@@ -97,9 +98,9 @@ ui <- fluidPage(
   
   hr(),
   
-  uiOutput("dt")
+  uiOutput("dt"),
   
-  #textOutput("test")
+  textOutput("test")
 
 )
 
@@ -141,13 +142,13 @@ server <-  function(input, output, session){
     
     else if (input$select_var == 'Diversity Indices') {
       
-      attr <- colnames(county_di_2016)
-      attr[!attr %in% c("NAME","geometry")] 
+      attr <- colnames(di)
+      attr[!attr %in% c("NAME","Vintage","Level","geometry")] 
       
       selectInput(
         "select_attr",
         label = h3("Map Attribute:"),
-        c("Please select an option below" = "", attr[!attr %in% c("NAME","geometry")])
+        c("Please select an option below" = "", attr[!attr %in% c("NAME","Vintage","Level","geometry")])
       )
     }
   })
@@ -160,18 +161,25 @@ server <-  function(input, output, session){
     
     else if(input$select_attr != '') {
       
-      sliderInput("yr", "Vintage:", min = 2011, max = 2016, value = 2016, sep = '')
+      sliderInput("yr", "Vintage:", min = 2011, max = 2016, value = 2016, sep = '',animate =
+                    animationOptions(interval = 1200, loop = TRUE))
       
       }
   })
   
-  # FIX ME ---------
-  labels <- county_di_2016$NAME
-  
-  c <- paste("<strong>", labels, "</strong>", sep ='')
-  # ----------------
   
   # Map ------
+  
+  filtered_data <- reactive({
+    if (is.null(input$yr)) {
+      di %>%
+        filter(Vintage == 2016)
+    }
+    else{
+      di %>%
+        filter(Vintage == input$yr)
+    }
+  })
   
   output$mymap <- renderLeaflet({
     if (is.null(input$select_attr)) {
@@ -192,26 +200,66 @@ server <-  function(input, output, session){
     else
       
     {
-      sel_col <- input$select_attr
       
-      county_di_2016 %>%
+      filtered_data() %>%
         st_set_geometry(NULL) %>% 
-        pull("NAME") -> label
+        pull("NAME") -> labels
       
-      county_di_2016 %>%
+      filtered_data() %>%
         st_set_geometry(NULL) %>% 
         ungroup() %>%
         pull(input$select_attr) %>%
         round(digits = 3) -> map_var
       
-      c <- paste("<strong>", labels, "</strong><br>",map_var, sep = '')
+      c <- paste("<strong>", labels, "</strong><br>", input$select_attr,": ", map_var, sep = '')
       
-      leaflet(county_di_2016) %>%
+      # di %>%
+      #   filter(Vintage == input$yr)-> filtered_data
+      
+      
+      leaflet(filtered_data()) %>%
         addProviderTiles(providers$CartoDB.PositronNoLabels,
                          options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
+        # addPolygons(
+        #   group = "county",
+        #   fillColor = ~ colorQuantile("YlOrRd", map_var)(map_var),
+        #   fillOpacity = 0.5,
+        #   weight = 2,
+        #   stroke = T,
+        #   color = "grey",
+        #   opacity = 1,
+        #   dashArray = "3",
+        #   highlight = highlightOptions(
+        #     color = "white",
+        #     weight = 3,
+        #     bringToFront = TRUE
+        #   ),
+        #   options = list(zIndex = 2),
+        #   label = lapply(c, HTML)
+        # ) %>%
+        addProviderTiles(
+          "CartoDB.PositronOnlyLabels",
+          group = "labels",
+          options = providerTileOptions(zIndex = 3, pane = 'markerPane')
+        ) %>%
+        addLayersControl(overlayGroups = c("polygons", "labels"))
+    }
+  })
+  
+  
+  observe({
+    
+    while(is.null(input$MAPID_zoom)){return(invisible())}
+    
+    if (input$mymap_zoom <= 8) {
+      
+      filtered_data() %>%
+        filter(Level == 'county') -> f_cnty_data
+      
+      leafletProxy("mymap",f_cnty_data) %>% 
         addPolygons(
-          group = "polygons",
-          fillColor = ~ colorQuantile("YlOrRd", map_var)(map_var),
+          group = "county",
+          fillColor = ~ colorQuantile("YlOrRd", Shellys_DI)(Shellys_DI),
           fillOpacity = 0.5,
           weight = 2,
           stroke = T,
@@ -222,24 +270,22 @@ server <-  function(input, output, session){
             color = "white",
             weight = 3,
             bringToFront = TRUE
-          ),
-          options = list(zIndex = 2),
-          label = lapply(c, HTML)
-        ) %>%
-        addProviderTiles(
-          "CartoDB.PositronOnlyLabels",
-          group = "labels",
-          options = providerTileOptions(zIndex = 3, pane = 'markerPane')
-        ) %>%
-        addLayersControl(overlayGroups = c("polygons", "labels"))
-    }
+          )
+      )
+    } 
+
   })
+  
+  
+  
+  
+  # Data Table -----
   
   output$data_table <-
     DT::renderDataTable({
-      county_di_2016
+      di
     }, options = list(columnDefs = list(list(
-      targets = ncol(county_di_2016),
+      targets = ncol(di),
       render = JS(
         "function(data, type, row, meta) {",
         "return type === 'display' && data.toString().length > 6 ?",
@@ -262,15 +308,17 @@ server <-  function(input, output, session){
     
   })
   
-# Test / Trouble shooting  
-  # output$test <- renderPrint({
-  #   county_di_2016 %>%
-  #     st_set_geometry(NULL) %>%
-  #     ungroup() %>%
-  #     select(input$select_attr) -> map_var
-  #   
-  #   map_var
-  # })
+# Test / Trouble shooting
+output$test <- renderPrint({
+  
+  input$mymap_zoom
+  
+  filtered_data() %>%
+    filter(Level == 'county') -> f_cnty_data
+  
+  f_cnty_data
+  
+})
   
 }
 
