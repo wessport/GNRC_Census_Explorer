@@ -234,8 +234,11 @@ st_zm(county_di_2014,drop=TRUE, what ="ZM") -> county_di_2014
 ##########
 
 
+di %>%
+  filter(Vintage == 2016 & Level == "county") -> f_cnty_data
 
-leaflet(di) %>%
+leaflet(f_cnty_data) %>%
+  
   addProviderTiles(providers$CartoDB.PositronNoLabels,
                    options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
   addPolygons(
@@ -246,12 +249,8 @@ leaflet(di) %>%
     stroke = T,
     color = "grey",
     opacity = 1,
-    dashArray = "3",
-    highlight = highlightOptions(
-      color = "white",
-      weight = 3,
-      bringToFront = TRUE
-    ),
+    #dashArray = "3",
+    highlight = highlightOptions(color = "white",weight = 3,bringToFront = TRUE),
     options = list(zIndex = 2),
     label = lapply(c, HTML)
   ) %>%
@@ -260,9 +259,12 @@ leaflet(di) %>%
     group = "labels",
     options = providerTileOptions(zIndex = 3, pane = 'markerPane')
   ) %>%
-  addLayersControl(overlayGroups = c("county", "labels"))
+  addLayersControl(overlayGroups = c("polygons", "labels"))
 
 
 
 di %>%
   filter(Vintage == 2016 & Level == "county") 
+
+di %>%
+  st_set_geometry(NULL) -> test

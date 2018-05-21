@@ -31,6 +31,8 @@ library(tidyverse)
 # load("./data/bg_di.RData")
 load("./data/di.RData")
 
+
+
 # UI ----------------------------------------------------------------
 
 ui <- fluidPage(
@@ -171,55 +173,64 @@ server <-  function(input, output, session){
   # Map ------
   
   filtered_data <- reactive({
-    if (is.null(input$yr)) {
-      di %>%
-        filter(Vintage == 2016)
+    
+    req(input$mymap_zoom)
+    
+    if (is.null(input$yr)){y <- 2016} 
+    else {y <- input$yr}
+    
+    if (input$mymap_zoom <= 8) {
+      geolevel <- 'county'
     }
-    else{
-      di %>%
-        filter(Vintage == input$yr)
+    else if (input$mymap_zoom > 8 & input$mymap_zoom < 13){
+      geolevel <- 'tract'
     }
+    else if (input$mymap_zoom >= 13){
+      geolevel <- 'block group'
+    }
+    
+    di %>%
+      filter(Vintage == y & Level == geolevel)
+    
   })
   
   output$mymap <- renderLeaflet({
-    if (is.null(input$select_attr)) {
-      leaflet() %>%
-        setView(lat = 36.174465,
-                lng = -86.767960,
-                zoom = 8) %>%
-        addProviderTiles(providers$CartoDB.Positron,
-                         options = providerTileOptions(noWrap = TRUE, zIndex = 1))
-    } else if (input$select_attr == '') {
-      leaflet() %>%
-        setView(lat = 36.174465,
-                lng = -86.767960,
-                zoom = 8) %>%
-        addProviderTiles(providers$CartoDB.Positron,
-                         options = providerTileOptions(noWrap = TRUE, zIndex = 1))
-    }
-    else
-      
-    {
-      
-      filtered_data() %>%
-        st_set_geometry(NULL) %>% 
-        pull("NAME") -> labels
-      
-      filtered_data() %>%
-        st_set_geometry(NULL) %>% 
-        ungroup() %>%
-        pull(input$select_attr) %>%
-        round(digits = 3) -> map_var
-      
-      c <- paste("<strong>", labels, "</strong><br>", input$select_attr,": ", map_var, sep = '')
-      
-      # di %>%
-      #   filter(Vintage == input$yr)-> filtered_data
-      
-      
-      leaflet(filtered_data()) %>%
-        addProviderTiles(providers$CartoDB.PositronNoLabels,
-                         options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
+    
+    # if (is.null(input$select_attr)) {
+    #   leaflet() %>%
+    #     setView(lat = 36.174465,
+    #             lng = -86.767960,
+    #             zoom = 8) %>%
+    #     addProviderTiles(providers$CartoDB.Positron,
+    #                      options = providerTileOptions(noWrap = TRUE, zIndex = 1))
+    # } else if (input$select_attr == '') {
+    #   leaflet() %>%
+    #     setView(lat = 36.174465,
+    #             lng = -86.767960,
+    #             zoom = 8) %>%
+    #     addProviderTiles(providers$CartoDB.Positron,
+    #                      options = providerTileOptions(noWrap = TRUE, zIndex = 1))
+    # }
+    # else
+    #   
+    # {
+    #   
+    #   filtered_data() %>%
+    #     st_set_geometry(NULL) %>%
+    #     pull("NAME") -> labels
+    # 
+    #   filtered_data() %>%
+    #     st_set_geometry(NULL) %>%
+    #     ungroup() %>%
+    #     pull(input$select_attr) %>%
+    #     round(digits = 3) -> map_var
+    # 
+    #   c <- paste("<strong>", labels, "</strong><br>", input$select_attr,": ", map_var, sep = '')
+
+    leaflet(di) %>%
+      addProviderTiles(providers$CartoDB.PositronNoLabels, options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>% 
+      setView(lat = 36.174465,lng = -86.767960,zoom = 8) 
+        # %>%
         # addPolygons(
         #   group = "county",
         #   fillColor = ~ colorQuantile("YlOrRd", map_var)(map_var),
@@ -228,55 +239,86 @@ server <-  function(input, output, session){
         #   stroke = T,
         #   color = "grey",
         #   opacity = 1,
-        #   dashArray = "3",
-        #   highlight = highlightOptions(
-        #     color = "white",
-        #     weight = 3,
-        #     bringToFront = TRUE
-        #   ),
+        #   #dashArray = "3",
+        #   highlight = highlightOptions(color = "white",weight = 3,bringToFront = TRUE),
         #   options = list(zIndex = 2),
         #   label = lapply(c, HTML)
         # ) %>%
-        addProviderTiles(
-          "CartoDB.PositronOnlyLabels",
-          group = "labels",
-          options = providerTileOptions(zIndex = 3, pane = 'markerPane')
-        ) %>%
-        addLayersControl(overlayGroups = c("polygons", "labels"))
-    }
+        # addProviderTiles(
+        #   "CartoDB.PositronOnlyLabels",
+        #   group = "labels",
+        #   options = providerTileOptions(zIndex = 3, pane = 'markerPane')
+        # ) %>%
+        # addLayersControl(overlayGroups = c("polygons", "labels"))
+    # }
+    
   })
   
   
   observe({
+
+    # while(is.null(input$MAPID_zoom)){return(invisible())}
     
-    while(is.null(input$MAPID_zoom)){return(invisible())}
+    req(input$mymap_zoom)
     
-    if (input$mymap_zoom <= 8) {
+    if(is.null(input$select_attr)){
+      
+      fc <- 'grey'
       
       filtered_data() %>%
-        filter(Level == 'county') -> f_cnty_data
+        st_set_geometry(NULL) %>%
+        pull("NAME") -> labels
       
-      leafletProxy("mymap",f_cnty_data) %>% 
-        addPolygons(
-          group = "county",
-          fillColor = ~ colorQuantile("YlOrRd", Shellys_DI)(Shellys_DI),
-          fillOpacity = 0.5,
-          weight = 2,
-          stroke = T,
-          color = "grey",
-          opacity = 1,
-          dashArray = "3",
-          highlight = highlightOptions(
-            color = "white",
-            weight = 3,
-            bringToFront = TRUE
-          )
-      )
-    } 
+      c <- paste("<strong>", labels, "</strong>", sep = '')
+      
+    } else if(input$select_attr==''){
+      
+      fc <- 'grey'
+      
+      filtered_data() %>%
+        st_set_geometry(NULL) %>%
+        pull("NAME") -> labels
+      
+      c <- paste("<strong>", labels, "</strong>", sep = '')
+      
+    } else {
+      
+      fc <- ~ colorQuantile("YlOrRd", Shellys_DI)(Shellys_DI)
+      
+      filtered_data() %>%
+            st_set_geometry(NULL) %>%
+            pull("NAME") -> labels
 
+      filtered_data() %>%
+        st_set_geometry(NULL) %>%
+        ungroup() %>%
+        pull(input$select_attr) %>%
+        round(digits = 3) -> map_var
+      
+      c <- paste("<strong>", labels, "</strong><br>", input$select_attr,": ", map_var, sep = '')
+
+    }
+    
+    leafletProxy("mymap", data = filtered_data()) %>%
+      clearShapes() %>%
+      addPolygons(
+        fillColor = fc,
+        fillOpacity = 0.5,
+        weight = 2,
+        stroke = T,
+        color = "grey",
+        opacity = 1,
+        highlight = highlightOptions(color = "white",weight = 3,bringToFront = TRUE),
+        options = list(zIndex = 2),
+        label = lapply(c, HTML)
+      ) %>%
+      addProviderTiles(
+        "CartoDB.PositronOnlyLabels",
+        group = "labels",
+        options = providerTileOptions(zIndex = 3, pane = 'markerPane')
+      )
+    
   })
-  
-  
   
   
   # Data Table -----
@@ -309,16 +351,16 @@ server <-  function(input, output, session){
   })
   
 # Test / Trouble shooting
-output$test <- renderPrint({
-  
-  input$mymap_zoom
-  
-  filtered_data() %>%
-    filter(Level == 'county') -> f_cnty_data
-  
-  f_cnty_data
-  
-})
+# output$test <- renderPrint({
+#   
+#   input$mymap_zoom
+#   
+#   filtered_data() %>%
+#     filter(Level == 'county') -> f_cnty_data
+#   
+#   f_cnty_data
+#   
+# })
   
 }
 
