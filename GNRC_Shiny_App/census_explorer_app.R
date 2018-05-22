@@ -19,10 +19,12 @@ library(DT)
 library(htmltools)
 library(leaflet)
 library(magrittr)
+library(plotly)
 library(rgdal)
 library(shiny)
 library(sf)
 library(tidyverse)
+library(viridis)
 
 
 # Import data
@@ -85,16 +87,14 @@ ui <- fluidPage(
   fluidRow(
     
     column(3,
-           h4("Plot/Graph 1")
+           h4("Plot Controls")
     ),
     
-    column(4, offset = 1,
-           h4("Plot/Graph 2")
+    column(8, offset = 1,
+           h4("Plot/Graph 1"),
+           plotlyOutput("plot1")
     ),
     
-    column(4,
-           h4("Plot/Graph 3")
-    ),
     plotOutput("myplot")
   ),
   
@@ -256,8 +256,6 @@ server <-  function(input, output, session){
   
   
   observe({
-
-    # while(is.null(input$MAPID_zoom)){return(invisible())}
     
     req(input$mymap_zoom)
     
@@ -347,6 +345,44 @@ server <-  function(input, output, session){
       fluidRow(column(12), DT::dataTableOutput("data_table"))
       
     }
+    
+  })
+  
+  # Plot1 -----
+  
+  output$plot1 <- renderPlotly({
+
+    req(input$select_attr)
+
+    di %>%
+      st_set_geometry(NULL) %>%
+      filter(Level == "county") %>%
+      group_by(NAME) %>%
+      plot_ly(
+        x = ~ Vintage,
+        y = ~ Shellys_DI,
+        color = ~ NAME,
+        colors = viridis_pal(option = "D")(3),
+        name = ~ NAME,
+        type = 'scatter',
+        mode = 'lines+markers'
+      ) %>% 
+      layout(updatemenus = list(list(
+        y = 0.8,
+        buttons = list(
+          list(
+            method = "restyle",
+            args = list("type", "scatter"),
+            label = "Scatter"
+          ),
+          
+          list(
+            method = "restyle",
+            args = list("type", "histogram2d"),
+            label = "2D Histogram"
+          )
+        )
+      )))
     
   })
   

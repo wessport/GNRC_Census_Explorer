@@ -1,4 +1,5 @@
 # A sandbox for working with census data
+library(dplyr)
 library(tidycensus)
 library(leaflet)
 library(rgdal)
@@ -7,6 +8,8 @@ library(sf)
 library(tigris)
 library(tidyverse)
 library(lettercase)
+library(plotly)
+library(viridis)
 options(tigris_class = "sf")
 options(tigris_use_cache = TRUE)
 census_api_key("6999d8d1e472e95e754d605f9a5646beec7eede5", install = TRUE)
@@ -266,5 +269,18 @@ leaflet(f_cnty_data) %>%
 di %>%
   filter(Vintage == 2016 & Level == "county") 
 
+di %>% 
+  st_set_geometry(NULL) %>%
+  filter(NAME == 'Davidson County, Tennessee') %>%
+  select(Vintage, Shellys_DI)-> test
+
+# Plotly
+
 di %>%
-  st_set_geometry(NULL) -> test
+  st_set_geometry(NULL) %>%
+  filter(Level == "county")%>%
+  group_by(NAME)%>% 
+  plot_ly(x = ~Vintage, y = ~Shellys_DI, ylab = 'DI', color = ~NAME, colors = viridis_pal(option = "D")(3), name = ~NAME, type = 'scatter', mode = 'lines+markers')
+
+
+
