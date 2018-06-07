@@ -1,8 +1,0 @@
-"0","library(viridis)"
-"0","ggplot(wc_rent) +"
-"0","  geom_sf(aes(fill = estimate)) + "
-"0","  scale_fill_viridis(""estimate"") +"
-"0","  #ggtitle(""Median Rent in Greater Nashville Metropolitan Area"") +"
-"0","  labs(title = ""Median Rent in Greater Nashville Metropolitan Area"","
-"0","       subtitle = ""2012-2016 American Community Survey"") +"
-"0","  theme_bw()"

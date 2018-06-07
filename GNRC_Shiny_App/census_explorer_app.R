@@ -52,8 +52,7 @@ ui <- fluidPage(
       selectInput(
         "select_category",
         label = h3("Category:"),
-        choices = c(
-          "Please select an option below" = "",
+        c("Please select an option below" = "",
           "Population" = "Pop",
           "Transportation" = "Tran",
           "Housing" = "Housing",
@@ -64,20 +63,18 @@ ui <- fluidPage(
       
       uiOutput("secondSelection"),
       
-      uiOutput("thirdSelection")
+      uiOutput("thirdSelection"),
       
-      # uiOutput("slider"),
+      uiOutput("GeoSelection"),
       
+      uiOutput("slider")
       
-      #sliderInput("yr", "Vintage:", min = 2011, max = 2017, value = c(2014, 2015), sep = '', dragRange = TRUE)
       
       ),
     
     mainPanel(
-      leafletOutput("mymap"),
-      
-      uiOutput("slider")
-      
+      leafletOutput("mymap", height = 675)
+
     )
   ),
   
@@ -102,7 +99,9 @@ ui <- fluidPage(
   
   uiOutput("dt"),
   
-  textOutput("test")
+  uiOutput("download_dt")
+  
+  # textOutput("test")
 
 )
 
@@ -112,14 +111,17 @@ ui <- fluidPage(
 server <-  function(input, output, session){
   
   # Dynamic Input Widgets
+  
   output$secondSelection <- renderUI({
     
-    if (input$select_category == ''){}
+    req(input$select_category)
+    
+    if(input$select_category == ""){}
     
     else if (input$select_category == 'Pop') {
       selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Diversity Indices', 'b', 'c'))
     }
-    
+
     else if (input$select_category == 'Tran') {
       selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'd', 'e', 'f'))
     }
@@ -138,9 +140,11 @@ server <-  function(input, output, session){
     
   })
   
-  output$thirdSelection <- renderUI({
+  output$thirdSelection <- renderUI({ 
     
-    if (input$select_category == ''){}
+    req(input$select_var)
+    
+    if (input$select_var == ''){}
     
     else if (input$select_var == 'Diversity Indices') {
       
@@ -157,20 +161,41 @@ server <-  function(input, output, session){
   
   output$slider <- renderUI({
     
-    if (is.null(input$select_attr)){return(invisible())}
-    
-    else if (input$select_attr == ''){return(invisible())}
-    
-    else if(input$select_attr != '') {
+    req(input$select_attr)
       
-      sliderInput("yr", "Vintage:", min = 2011, max = 2016, value = 2016, sep = '',animate =
+    sliderInput("yr", "Vintage:", min = 2011, max = 2016, value = 2016, sep = '', animate =
                     animationOptions(interval = 1200, loop = TRUE))
       
-      }
+    })
+    
+  output$GeoSelection <- renderUI({
+    
+    req(input$select_attr)
+    
+    if (input$select_attr == ''){}
+    
+    else {
+      
+      selectInput(
+        "select_geo",
+        label = h3("Geographic Division:"),
+        c("Please select an option below" = "", "Automatic by Zoom Level","County","Tract","Block Group")
+      )
+    }
   })
   
   
   # Map ------
+  
+  selected_data <-  reactive({
+    
+    req(input$mymap_zoom)
+    
+    if(is.null(input$select_attr)){di}
+    
+    else if (input$select_attr == ""){di}
+    
+  })
   
   filtered_data <- reactive({
     
@@ -179,15 +204,37 @@ server <-  function(input, output, session){
     if (is.null(input$yr)){y <- 2016} 
     else {y <- input$yr}
     
-    if (input$mymap_zoom <= 8) {
+    if(is.null(input$select_geo)){
+    
+      if (input$mymap_zoom <= 9) {
+        geolevel <- 'county'
+      }
+      else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
+        geolevel <- 'tract'
+      }
+      else if (input$mymap_zoom >= 13){
+        geolevel <- 'block group'
+      }
+    }
+    
+    else if (input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
+      
+      if (input$mymap_zoom <= 9) {
       geolevel <- 'county'
+      }
+      else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
+        geolevel <- 'tract'
+      }
+      else if (input$mymap_zoom >= 13){
+        geolevel <- 'block group'
+      }
     }
-    else if (input$mymap_zoom > 8 & input$mymap_zoom < 13){
-      geolevel <- 'tract'
-    }
-    else if (input$mymap_zoom >= 13){
-      geolevel <- 'block group'
-    }
+    
+    else if(input$select_geo == "County"){geolevel <- 'county'}
+    
+    else if(input$select_geo == "Tract"){geolevel <- 'tract'}
+    
+    else if(input$select_geo == "Block Group"){geolevel <- 'block group'}
     
     di %>%
       filter(Vintage == y & Level == geolevel)
@@ -195,62 +242,12 @@ server <-  function(input, output, session){
   })
   
   output$mymap <- renderLeaflet({
-    
-    # if (is.null(input$select_attr)) {
-    #   leaflet() %>%
-    #     setView(lat = 36.174465,
-    #             lng = -86.767960,
-    #             zoom = 8) %>%
-    #     addProviderTiles(providers$CartoDB.Positron,
-    #                      options = providerTileOptions(noWrap = TRUE, zIndex = 1))
-    # } else if (input$select_attr == '') {
-    #   leaflet() %>%
-    #     setView(lat = 36.174465,
-    #             lng = -86.767960,
-    #             zoom = 8) %>%
-    #     addProviderTiles(providers$CartoDB.Positron,
-    #                      options = providerTileOptions(noWrap = TRUE, zIndex = 1))
-    # }
-    # else
-    #   
-    # {
-    #   
-    #   filtered_data() %>%
-    #     st_set_geometry(NULL) %>%
-    #     pull("NAME") -> labels
-    # 
-    #   filtered_data() %>%
-    #     st_set_geometry(NULL) %>%
-    #     ungroup() %>%
-    #     pull(input$select_attr) %>%
-    #     round(digits = 3) -> map_var
-    # 
-    #   c <- paste("<strong>", labels, "</strong><br>", input$select_attr,": ", map_var, sep = '')
 
     leaflet(di) %>%
       addProviderTiles(providers$CartoDB.PositronNoLabels, options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>% 
       setView(lat = 36.174465,lng = -86.767960,zoom = 8) 
         # %>%
-        # addPolygons(
-        #   group = "county",
-        #   fillColor = ~ colorQuantile("YlOrRd", map_var)(map_var),
-        #   fillOpacity = 0.5,
-        #   weight = 2,
-        #   stroke = T,
-        #   color = "grey",
-        #   opacity = 1,
-        #   #dashArray = "3",
-        #   highlight = highlightOptions(color = "white",weight = 3,bringToFront = TRUE),
-        #   options = list(zIndex = 2),
-        #   label = lapply(c, HTML)
-        # ) %>%
-        # addProviderTiles(
-        #   "CartoDB.PositronOnlyLabels",
-        #   group = "labels",
-        #   options = providerTileOptions(zIndex = 3, pane = 'markerPane')
-        # ) %>%
         # addLayersControl(overlayGroups = c("polygons", "labels"))
-    # }
     
   })
   
@@ -336,6 +333,8 @@ server <-  function(input, output, session){
     
   output$dt <- renderUI({
     
+    req(input$select_var)
+    
     if(is.null(input$select_var)){}
     
     else if (input$select_var == ''){}
@@ -347,6 +346,25 @@ server <-  function(input, output, session){
     }
     
   })
+  
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste(input$select_var, ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv((di%>%st_set_geometry(NULL)), file, row.names = FALSE)
+    }
+  )
+  
+  output$download_dt <- renderUI({
+    
+    req(input$select_var)
+    
+    fluidRow(
+      
+      column(10),downloadButton("downloadData", "Download Spreadsheet"))
+  })
+  
   
   # Plot1 -----
   

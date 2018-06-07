@@ -371,4 +371,6 @@ county_di %>%
   rbind(tract_di) %>%
   rbind(bg_di) -> di
 
+di <- st_transform(di, 4326, use_gdal = T)
+
 save(di, file = "data/di.RData")

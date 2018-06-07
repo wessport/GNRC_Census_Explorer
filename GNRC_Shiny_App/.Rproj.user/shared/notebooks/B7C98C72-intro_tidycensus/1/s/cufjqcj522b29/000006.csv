@@ -1,7 +1,0 @@
-"0","# Plot of median gross rent by state in 1990"
-"0","m90 %>%"
-"0","  ggplot(aes(x = value, y = reorder(NAME, value))) + "
-"0","  geom_point() + "
-"0","  labs(title = ""Gross Median Rent by State"","
-"0","       subtitle = ""1990 Decennial Survey"","
-"0","       y ='')"

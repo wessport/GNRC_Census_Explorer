@@ -1,4 +1,0 @@
-"0","m90 <- get_decennial(geography = ""state"", variables = ""H043A001"", year = 1990)"
-"2","Checking SF3 API for data...
-"
-"0","head(m90)"

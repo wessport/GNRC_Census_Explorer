@@ -1,7 +1,0 @@
-"0","rent <- get_acs(geography = 'tract', variables = 'DP04_0134', state = 'TN', geometry = TRUE)"
-"2","Please note: `get_acs()` now defaults to a year or endyear of 2016.
-"
-"2","Using the ACS Data Profile
-"
-"2","Using FIPS code '47' for state 'TN'
-"

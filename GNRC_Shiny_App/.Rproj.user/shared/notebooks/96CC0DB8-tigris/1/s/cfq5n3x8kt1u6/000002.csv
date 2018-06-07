@@ -1,4 +1,0 @@
-"0","# Subset the TN-KY census tracts by locating the boundary of the Nashville Metropolitan area via the core based statistical area"
-"0","cb <- core_based_statistical_areas(cb = TRUE)"
-"0","pdx <- filter(cb, grepl(""Nashville-Davidson--Murfreesboro--Franklin, TN"", NAME))"
-"0","ggplot(pdx) + geom_sf()"
