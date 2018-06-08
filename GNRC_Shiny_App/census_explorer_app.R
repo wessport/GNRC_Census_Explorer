@@ -11,7 +11,7 @@
 #                                                             #
 #                http://shiny.rstudio.com/                    #
 #                                                             #
-#               Last Updated: 17-MAY-2018                     #
+#               Last Updated: 08-JUNE-2018                    #
 #                                                             #
 ###############################################################
 
@@ -110,7 +110,7 @@ ui <- fluidPage(
 
 server <-  function(input, output, session){
   
-  # Dynamic Input Widgets
+  # Select box widget for user variable selection
   
   output$secondSelection <- renderUI({
     
@@ -140,15 +140,30 @@ server <-  function(input, output, session){
     
   })
   
+  # Load data by user selection
+  
+  selected_data <-  reactive({
+    
+    if(is.null(input$select_var)){readRDS("./data/default_data.rds")}
+    
+    else if (input$select_var == ""){readRDS("./data/default_data.rds")}
+    
+    else {readRDS(paste("./data/",input$select_var,".rds",sep=""))}
+    
+  })
+  
+  
   output$thirdSelection <- renderUI({ 
     
     req(input$select_var)
     
     if (input$select_var == ''){}
     
-    else if (input$select_var == 'Diversity Indices') {
+    # else if (input$select_var == 'Diversity Indices') {
       
-      attr <- colnames(di)
+    else {
+    
+      attr <- colnames(selected_data())
       attr[!attr %in% c("NAME","Vintage","Level","geometry")] 
       
       selectInput(
@@ -186,16 +201,6 @@ server <-  function(input, output, session){
   
   
   # Map ------
-  
-  selected_data <-  reactive({
-    
-    req(input$mymap_zoom)
-    
-    if(is.null(input$select_attr)){di}
-    
-    else if (input$select_attr == ""){di}
-    
-  })
   
   filtered_data <- reactive({
     
@@ -236,7 +241,7 @@ server <-  function(input, output, session){
     
     else if(input$select_geo == "Block Group"){geolevel <- 'block group'}
     
-    di %>%
+    selected_data() %>%
       filter(Vintage == y & Level == geolevel)
     
   })
@@ -320,9 +325,9 @@ server <-  function(input, output, session){
   
   output$data_table <-
     DT::renderDataTable({
-      di
+      selected_data()
     }, options = list(columnDefs = list(list(
-      targets = ncol(di),
+      targets = ncol(selected_data()),
       render = JS(
         "function(data, type, row, meta) {",
         "return type === 'display' && data.toString().length > 6 ?",
@@ -352,7 +357,7 @@ server <-  function(input, output, session){
       paste(input$select_var, ".csv", sep = "")
     },
     content = function(file) {
-      write.csv((di%>%st_set_geometry(NULL)), file, row.names = FALSE)
+      write.csv((selected_data()%>%st_set_geometry(NULL)), file, row.names = FALSE)
     }
   )
   

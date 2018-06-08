@@ -16,6 +16,7 @@ library(stringr)
 # Currently works for ACS 2016-2015
 # Will need to update to handle 2014-2011
 
+# 6999d8d1e472e95e754d605f9a5646beec7eede5
 census_api_key(Sys.getenv("CENSUS_API_KEY"))
 
 state = 'TN'
@@ -48,10 +49,25 @@ format_Census <- function(state, counties, geo, tableID, yr){
   a <- acs_variables[acs_variables$table_name %in% tableID,]
   
   # Prep variable IDs for joining
-  a %>% mutate(name_mod = substr(name,1,nchar(as.character(name))-1))%>% 
-    mutate(label_mod = substr(label,11,nchar(as.character(label)))) %>% 
-    mutate(label_mod = gsub("!!"," ",label_mod)) %>%
-    select(-table_name) -> a
+  if (yr > 2014){
+  
+    a %>% mutate(name_mod = substr(name,1,nchar(as.character(name))-1))%>% 
+      mutate(label_mod = substr(label,11,nchar(as.character(label)))) %>% 
+      mutate(label_mod = gsub("Total!!"," ",label_mod)) %>%
+      mutate(label_mod = gsub("!!"," ",label_mod)) %>%
+      select(-table_name) -> a
+    
+    } else {
+      
+    a %>% 
+    filter(grepl("*E$",a$name)) %>%
+    select(-table_name) %>%
+    mutate(label = gsub(":!!"," ",label)) %>%
+    mutate(label = gsub(":"," ",label)) %>%
+    mutate(label_mod = label) %>%
+    mutate(name_mod = substr(name,1,nchar(as.character(name))-1)) %>%
+    mutate(concept = str_extract(concept,"^*\\s([^ ]).*$")) -> a
+    }
   
   # Join variable names and variable IDs together
   # Be careful to preserve sf class for the geometry attribute
@@ -76,7 +92,7 @@ format_Census <- function(state, counties, geo, tableID, yr){
   return(census_format)
 }
 
-test <-  format_Census(state, counties, geo, tableID, 2015)
+test <-  format_Census(state, counties, geo, tableID, 2011)
 
 
 # 2011-2014 ------------------------------------------------------------
@@ -98,16 +114,17 @@ b %>%
   select(-table_name) %>%
   mutate(label = gsub(":!!"," ",label)) %>%
   mutate(label = gsub(":"," ",label)) %>%
-  mutate(name_mod = substr(name,1,nchar(as.character(name))-1)) -> b
+  mutate(name_mod = substr(name,1,nchar(as.character(name))-1)) %>%
+  mutate(concept = str_extract(concept,"^*\\s([^ ]).*$")) -> b
 
-a %>% 
-  mutate(label_mod = str_split_fixed(label,"!!",2))
-
-t <- cbind.data.frame(a, c('a','b','c') = str_split_fixed(a$label,"!!",3))
-
-# NEED TO FIGURE OUT HOWTO SPLIT AND THEN ADD IN TOTAL 
-t %>%
-  mutate(t)
+# a %>% 
+#   mutate(label_mod = str_split_fixed(label,"!!",2))
+# 
+# t <- cbind.data.frame(a, c('a','b','c') = str_split_fixed(a$label,"!!",3))
+# 
+# # NEED TO FIGURE OUT HOWTO SPLIT AND THEN ADD IN TOTAL 
+# t %>%
+#   mutate(t)
 
 # Prep variable IDs for joining
 # a %>% mutate(name_mod = substr(name,1,nchar(as.character(name))-1))%>% 
@@ -118,7 +135,7 @@ t %>%
 # Join variable names and variable IDs together
 # Be careful to preserve sf class for the geometry attribute
 census_data %>% 
-  left_join(a, by = c("variable" = "name_mod")) %>% 
+  left_join(b, by = c("variable" = "name_mod")) %>% 
   select(-name,-concept)-> census_data
 
 # Formatting Census table in familiar format for users
