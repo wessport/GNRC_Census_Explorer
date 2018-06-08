@@ -5,6 +5,8 @@
 # Script Summary: Function for formatting tidycensus data
 # Last Updated: 09-MAY-2018
 
+library(plyr)
+library(dplyr)
 library(tidycensus)
 library(magrittr)
 library(sf)
@@ -13,11 +15,10 @@ library(lettercase)
 library(lwgeom)
 library(stringr)
 
-# Currently works for ACS 2016-2015
-# Will need to update to handle 2014-2011
+# Currently works for ACS 2016-2011
 
-# 6999d8d1e472e95e754d605f9a5646beec7eede5
-census_api_key(Sys.getenv("CENSUS_API_KEY"))
+# census_api_key(Sys.getenv("CENSUS_API_KEY"))
+census_api_key("6999d8d1e472e95e754d605f9a5646beec7eede5")
 
 state = 'TN'
 counties <- c('Cheatham','Davidson','Dickson','Houston','Humphreys','Montgomery','Maury','Robertson','Rutherford','Stewart','Sumner',
@@ -53,7 +54,7 @@ format_Census <- function(state, counties, geo, tableID, yr){
   
     a %>% mutate(name_mod = substr(name,1,nchar(as.character(name))-1))%>% 
       mutate(label_mod = substr(label,11,nchar(as.character(label)))) %>% 
-      mutate(label_mod = gsub("Total!!"," ",label_mod)) %>%
+      mutate(label_mod = gsub("Total!!","",label_mod)) %>%
       mutate(label_mod = gsub("!!"," ",label_mod)) %>%
       select(-table_name) -> a
     
@@ -92,8 +93,21 @@ format_Census <- function(state, counties, geo, tableID, yr){
   return(census_format)
 }
 
-test <-  format_Census(state, counties, geo, tableID, 2011)
+test_2015 <-  format_Census(state, counties, geo, tableID, 2015)
+
+test_2014 <-  format_Census(state, counties, geo, tableID, 2014)
+
+# test <- bind_rows(test_2015,test_2014)
+
+# Option 2
+test_2015[setdiff(names(test_2014), names(test_2015))] <- NA
+test_2014[setdiff(names(test_2015), names(test_2014))] <- NA
+t <- rbind(test_2015,test_2014)
 
 
+# Strange issue with column names
+# Error: Only strings can be converted to symbols
+# Use option 2
+test %>% select(NAME)
 
 
