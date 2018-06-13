@@ -3,7 +3,7 @@
 # Creation Date: 08-MAY-2018
 # Script Author: Wes Porter
 # Script Summary: Requesting raw census data for Census Explorer Shiny App
-# Last Updated: 08-MAY-2018
+# Last Updated: 13-JUNE-2018
 
 library(tidycensus)
 library(leaflet)
@@ -19,91 +19,149 @@ options(tigris_class = "sf")
 options(tigris_use_cache = TRUE)
 census_api_key(Sys.getenv("CENSUS_API_KEY"))
 
-setwd("C:/Users/wPorter/Data/Census/ACS5_tabular_data/data_dictionary/variableID_tables")
+source("C:/Users/wPorter/GitHub/GNRC_Census_Explorer/GNRC_Shiny_App/format_CensusTable.R")
 
 # VARIABLES --------------------------------------------------------------
 
-# Load variables of interest
-contract_rent_varid <- read.csv("contract_rent.csv", header = FALSE)
-detailed_race_varid <- read.csv("detailed_race.csv", header = FALSE)
-emp_status_varid <- read.csv("employment_status_for_the_population_16_years_and_over.csv", header = FALSE)
-gross_rent_varid <- read.csv("gross_rent.csv", header = FALSE)
-health_insr_cov_varid <- read.csv("health_insurance_coverage_status_by_sex_by_age.csv", header = FALSE)
-household_type_white <- read.csv("houeshold_type_including_living_alone_white_alone_not_hispanic_or_latino.csv", header = FALSE)
-house_heating_varid <- read.csv("house_heating_fuel.csv", header = FALSE)
-household_income_varid <- read.csv("household_income_in_the_past_12_months.csv", header = FALSE)
-household_type_children_varid <- read.csv("household_type_for_children_under_18_years_in_households.csv", header = FALSE)
-household_type_alone_varid <- read.csv("household_type_including_living_alone.csv", header = FALSE)
-household_type_native_varid <- read.csv("household_type_including_living_alone_american_indian_and_alaska_native_alone.csv", header = FALSE)
-household_type_asian_varid <-  read.csv("household_type_including_living_alone_asian_alone.csv")
-household_type_black_varid <-  read.csv("household_type_including_living_alone_black_or_african_american_alone.csv", header = FALSE)
-household_type_hispanic_vaird <- read.csv("household_type_including_living_alone_hispanic_or_latino.csv")
-household_type_hawaiian_varid <- read.csv("household_type_including_living_alone_native_hawaiian_and_other_pacific_islander_alone.csv", header = FALSE)
-household_type_other_varid <- read.csv("household_type_including_living_alone_some_other_race_alone.csv", header = FALSE)
-household_type_more_varid <-  read.csv("household_type_including_living_alone_two_or_more_races.csv", header = FALSE)
-household_type_white_varid <- read.csv("household_type_including_living_alone_white_alone.csv", header = FALSE)
-housing_unit_varid <-  read.csv("housing_units.csv", header = FALSE)
-language_spoken_varid <- read.csv("language_spoken_at_home_for_the_population_5_years_and_over.csv", header = FALSE)
-living_arrangements_varid <- read.csv("living_arrangements_of_adults_18_years_and_over_by_age.csv", header = FALSE)
-mean_usual_hours_varid <-  read.csv("mean_usual_hours_worked_in_the_past_12_months_for_workers_16_to_64_years.csv", header = FALSE)
-means_transportation_varid <- read.csv("means_of_transportation_to_work.csv")
-means_trans_native_varid <- read.csv("means_of_transportation_to_work_american_indian_and_alaska_native_alone.csv", header = FALSE)
-means_trans_asian_varid <- read.csv("means_of_transportation_to_work_asian_alone.csv", header = FALSE)
-means_trans_black_varid <- read.csv("means_of_transportation_to_work_black_or_african_american_alone.csv", header = FALSE)
-means_trans_by_age_varid <- read.csv("means_of_transportation_to_work_by_age.csv", header = FALSE)
-means_trans_by_class_varid <- read.csv("means_of_transportation_to_work_by_class_of_worker.csv", header = FALSE)
-means_trans_by_poverty_varid <- read.csv("means_of_transportation_to_work_by_poverty_status_in_the_past_12_mo.csv", header = FALSE)
-means_trans_hispanic_vaird <- read.csv("means_of_transportation_to_work_hispanic_or_latino.csv", header = FALSE)
-means_trans_hawaiian_varid <- read.csv("means_of_transportation_to_work_native_hawaiian_and_other_pacific_islander_alone.csv", header = FALSE)
-means_trans_other_varid <- read.csv("means_of_transportation_to_work_some_other_race_alone.csv", header = FALSE)
-means_trans_more_varid <- read.csv("means_of_transportation_to_work_two_or_more_races.csv", header = FALSE)
-means_trans_white_varid  <- read.csv("means_of_transportation_to_work_white_alone.csv", header = FALSE)
-means_trans_white_noth_varid <- read.csv("means_of_transportation_to_work_white_alone_not_hispanic_or_latino.csv", header = FALSE)
-median_age_trans_varid <- read.csv("median_age_by_means_of_transportation_to_work.csv", header = FALSE)
-median_age_by_sex_varid <- read.csv("median_age_by_sex_for_workers_16_to_64_years.csv", header = FALSE)
-median_gross_rent_varid <- read.csv("median_gross_rent_by_bedrooms.csv", header = FALSE)
-median_monthly_housing_varid <- read.csv("median_monthly_housing_costs_dollars.csv", header = FALSE)
-median_value_dollars_varid <- read.csv("median_value_dollars.csv", header = FALSE)
-medicare_cov_by_sex_varid <- read.csv("medicare_coverage_by_sex_by_age.csv", header = FALSE)
-monthly_housing_costs_varid <- read.csv("monthly_housing_costs.csv", header = FALSE)
-mortage_status_vaird <- read.csv("mortage_status_and_selected_monthly_owner_costs.csv", header = FALSE)
-occupancy_status_varid <- read.csv("occupancy_status.csv", header = FALSE)
-pop_under_18_varid <-  read.csv("population_under_18_years_by_age.csv", header = FALSE)
-pverty_status_varid <-  read.csv("poverty_status_in_the_past_12_months_by_age.csv", header = FALSE)
-race_varid <- read.csv("race.csv", header = FALSE)
-ratio_income_pov_varid <- read.csv("ratio_of_income_to_poverty_level_in_the_past_12_mo.csv", header = FALSE)
-ratio_income_pov_fam_varid <- read.csv("ratio_of_income_to_poverty_level_of_families_in_the_past_12_months.csv", header = FALSE)
-shool_enrollment_varid <- read.csv("school_enrollment_by_level_of_school_for_the_population_3_years_and_over.csv", header=FALSE)
-sex_by_age_varid <-  read.csv("sex_by_age.csv", header = FALSE)
-sex_by_age_by_dis_varid <- read.csv("sex_by_age_by_disability_status.csv", header = FALSE)
-sex_by_age_by_edu_varid <- read.csv("sex_by_age_by_educational_attainment_for_the_population_18_years_and_over.csv", header = FALSE)
-sex_by_age_by_emp_female_varid <- read.csv("sex_by_age_by_employment_status_for_the_population_16_years_and_over_female.csv", header = FALSE)
-sex_by_age_by_emp_male_varid <- read.csv("sex_by_age_by_employment_status_for_the_population_16_years_and_over_male.csv", header = FALSE)
-sex_by_age_by_vet_varid <- read.csv("sex_by_age_by_veteran_status_for_the_civilian_population_18_years_and_over.csv", header = FALSE)
-sex_by_class <- read.csv("sex_by_class_of_worker_for_the_civilian_employed_population_16_years_and_over.csv", header = FALSE)
-sex_of_workers_trans_varid <- read.csv("sex_of_workers_by_means_of_transportation_to_work.csv", header = FALSE)
-sex_workers_travel_time_varid <-  read.csv("sex_of_workers_by_travel_time_to_work.csv", header = FALSE)
-sex_workers_vehicle_avail_varid <-  read.csv("sex_of_workers_by_vehicles_available.csv", header = FALSE)
-time_leaving_home_varid <-  read.csv("time_leaving_home_to_go_to_work.csv", header = FALSE)
-total_pop_varid <- read.csv("total_pop.csv", header = FALSE)
-travel_time_to_work_varid <- read.csv("travel_time_to_work.csv", header = FALSE)
-vacancy_status_varid <- read.csv("vacancy_status.csv", header = FALSE)
-value_varid <- read.csv("value.csv", header = FALSE)
-women_birth <- read.csv("women_15_to_50_years_who_had_a_birth_in_the_past_12_mo_by_marital_status_and_age.csv", header = FALSE)
-year_struc_built_varid <- read.csv("year_structure_built.csv", header = FALSE)
-
-# COUNTY -----------------------------------------------------------------
-# Request county level data including the following geographic boundaries:
-
-# County
-# Tract
-# Block Group
+# Define variable TableIDs
+contract_rent <- "B25056"
+detailed_race <- "C02003"
+emp_status <- "B23025"
+gross_rent <- "B25063"
+health_insr_cov <- "B27001"
+household_type_white <- "B11001H"
+house_heating <- "B25040"
+household_income <- "B19001"
+household_type_children <- "B09005"
+household_type_alone <- "B11001"
+household_type_native <- "B11001C"
+household_type_asian <- "B11001D"
+household_type_black <- "B11001B"
+household_type_hispanic <- "B11001I"
+household_type_hawaiian <- "B11001E"
+household_type_other <- "B11001F"
+household_type_more <- "B11001G"
+household_type_white <- "B11001A"
+housing_unit <- "B25001"
+language_spoken <- "C16001"
+living_arrangements <- "B09021"
+mean_usual_hours <- "B23020"
+means_transportation <- "B08301"
+means_trans_native <- "B08105C"
+means_trans_asian <- "B08105D"
+means_trans_black <- "B08105B"
+means_trans_by_age <- "B08101"
+means_trans_by_class <- "B08128"
+means_trans_by_poverty <- "B08122"
+means_trans_hispanic <- "B08105I"
+means_trans_hawaiian <- "B08105E"
+means_trans_other <- "B08105F"
+means_trans_more <- "B08105G"
+means_trans_white <- "B08105A"
+means_trans_white_noth <- "B08105H"
+median_age_trans <- "B08103"
+median_age_by_sex <- "B23013"
+median_gross_rent <- "B25031"
+median_monthly_housing <- "B25105"
+median_value_dollars <- "B25077"
+medicare_cov_by_sex <- "C27006"
+monthly_housing_costs <- "B25104"
+mortage_status <- "B25087"
+occupancy_status <- "B25002"
+pop_under_18 <- "B09001"
+pverty_status <- "B17020"
+race <- "B02001"
+ratio_income_pov <- "C17002"
+ratio_income_pov_fam <- "B17026"
+shool_enrollment <- "B14001"
+sex_by_age <- "B01001"
+sex_by_age_by_dis <- "B18101"
+sex_by_age_by_edu <- "B15001"
+sex_by_age_by_emp <- "B23001"
+sex_by_age_by_vet <- "B21001"
+sex_by_class <- "B24080"
+sex_of_workers_trans <- "B08006"
+sex_workers_travel_time <- "B08012"
+sex_workers_vehicle_avail <- "B08014"
+time_leaving_home <- "B08302"
+total_pop <- "B01003"
+travel_time_to_work <- "B08303"
+vacancy_status <- "B25004"
+value <- "B25075"
+women_birth <- "B13002"
+year_struc_built <- "B25034"
 
 # Define GNRC counties
 counties <- c('Cheatham','Davidson','Dickson','Houston','Humphreys','Montgomery','Maury','Robertson','Rutherford','Stewart','Sumner',
               'Trousdale','Williamson','Wilson')
+state <- 'TN'
+
+# REQUEST DATA -------------------------------------------------------------
+tableID <- "B25056"
+
+request_data <- function(tableID)
+
+county_data_16 <- format_Census('county',tableID,2016,state,counties)
+tract_data_16 <- format_Census('tract',tableID,2016,state,counties)
+bg_data_16 <- format_Census('block group',tableID,2016,state,counties)
+
+county_data_15 <- format_Census('county',tableID,2015,state,counties)
+tract_data_15 <- format_Census('tract',tableID,2015,state,counties)
+bg_data_15 <- format_Census('block group',tableID,2015,state,counties)
+
+county_data_14 <- format_Census('county',tableID,2014,state,counties)
+tract_data_14 <- format_Census('tract',tableID,2014,state,counties)
+bg_data_14 <- format_Census('block group',tableID,2014,state,counties)
+
+county_data_13 <- format_Census('county',tableID,2013,state,counties)
+tract_data_13 <- format_Census('tract',tableID,2013,state,counties)
+bg_data_13 <- format_Census('block group',tableID,2013,state,counties)
+
+county_data_12 <- format_Census('county',tableID,2012,state,counties)
+tract_data_12 <- format_Census('tract',tableID,2012,state,counties)
+bg_data_12 <- format_Census('block group',tableID,2012,state,counties)
+
+county_data_11 <- format_Census('county',tableID,2011,state,counties)
+tract_data_11 <- format_Census('tract',tableID,2011,state,counties)
+bg_data_11 <- format_Census('block group',tableID,2011,state,counties)
 
 
+a <-
+  rbind(
+    county_data_16,
+    tract_data_16,
+    bg_data_16,
+    county_data_15,
+    tract_data_15,
+    bg_data_15
+  )
+
+b <-
+  rbind(
+    county_data_14,
+    tract_data_14,
+    bg_data_14,
+    county_data_13,
+    tract_data_13,
+    bg_data_13,
+    county_data_12,
+    tract_data_12,
+    bg_data_12,
+    county_data_11,
+    tract_data_11,
+    bg_data_11
+  )
+
+# Prepare census data for row binding by filling mismatched columns with NA
+a[setdiff(names(b), names(a))] <- NA
+b[setdiff(names(a), names(b))] <- NA
+
+requested_data <- rbind(a,b)
+
+return(requested_data)
+  
+object.size(requested_data %>%
+  st_set_geometry(NULL))
 
 # WRITE DATA ---------------------------------------------------------------
 
@@ -114,8 +172,15 @@ save(census_format, file = paste(path,"sex_by_age_by_edu_formatted.rda", sep='')
 
 
 
+format_Census <- function(geography,tableID,year,state,counties){
+  
+  # Request data from Census API
+  census_data <- get_acs(geography, table = tableID, year = year, state = state, county = counties, 
+                         geometry = TRUE)
+  }
 
 
+bg_data_16 <- format_Census('block group',"B25056",2016,"TN",counties)
 
 
 
