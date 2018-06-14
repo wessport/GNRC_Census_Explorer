@@ -33,7 +33,7 @@ library(viridis)
 # load("./data/bg_di.RData")
 load("./data/di.RData")
 
-
+geom <- readRDS("./data/geometry.rds")
 
 # UI ----------------------------------------------------------------
 
@@ -127,7 +127,7 @@ server <-  function(input, output, session){
     }
 
     else if (input$select_category == 'Housing') {
-      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'g', 'h', 'i'))
+      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Contract Rent', 'h', 'i'))
     }
 
     else if (input$select_category == 'Health') {
@@ -148,7 +148,15 @@ server <-  function(input, output, session){
     
     else if (input$select_var == ""){readRDS("./data/default_data.rds")}
     
-    else {readRDS(paste("./data/",input$select_var,".rds",sep=""))}
+    else {
+      
+      tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
+      
+      tabular_data %>% 
+          left_join(geom, by = c("GEOID" = "GEOID")) -> t
+
+      st_as_sf(t)
+      }
     
   })
   
@@ -283,6 +291,7 @@ server <-  function(input, output, session){
       
     } else {
       
+      # fc <- ~ colorQuantile("YlOrRd", Shellys_DI)(Shellys_DI)
       fc <- ~ colorQuantile("YlOrRd", Shellys_DI)(Shellys_DI)
       
       filtered_data() %>%

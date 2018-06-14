@@ -237,7 +237,8 @@ st_zm(county_di_2014,drop=TRUE, what ="ZM") -> county_di_2014
 ##########
 
 
-di %>%
+test %>%
+  ungroup %>%
   filter(Vintage == 2016 & Level == "county") -> f_cnty_data
 
 leaflet(f_cnty_data) %>%
@@ -246,7 +247,7 @@ leaflet(f_cnty_data) %>%
                    options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
   addPolygons(
     group = "county",
-    fillColor = ~ colorQuantile("YlOrRd", Shellys_DI)(Shellys_DI),
+    fillColor = ~ colorQuantile("YlOrRd", "Total Estimate")("Total Estimate"),
     fillOpacity = 0.5,
     weight = 2,
     stroke = T,

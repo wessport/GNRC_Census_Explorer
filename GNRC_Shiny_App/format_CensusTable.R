@@ -17,8 +17,11 @@ library(stringr)
 
 # Currently works for ACS 2016-2011
 
+# CENSUS KEY ---------------------------------------------------
+
 # census_api_key(Sys.getenv("CENSUS_API_KEY"))
 census_api_key("6999d8d1e472e95e754d605f9a5646beec7eede5")
+
 
 # state = 'TN'
 # counties <- c('Cheatham','Davidson','Dickson','Houston','Humphreys','Montgomery','Maury','Robertson','Rutherford','Stewart','Sumner',
@@ -26,6 +29,8 @@ census_api_key("6999d8d1e472e95e754d605f9a5646beec7eede5")
 # geo <- 'tract'
 # tableID <- 'B25063'
 # yr <- 2016
+
+# DOWNLOAD AND FORMAT FUNCTION ----------------------------------
 
 format_Census <- function(geography,tableID,year,state,counties){
 
@@ -36,15 +41,13 @@ format_Census <- function(geography,tableID,year,state,counties){
   #                          table = tableID, geometry = TRUE)
   # 
   # } else {
-  
-  # if(geo == 'block group'){g <- 'block group'} else {g <- geo}
 
   # # Request data from Census API
   # census_data <- get_acs(geography,table = tableID,year = yr,state = state,county = counties, 
   #                   geometry = TRUE)
   # Request data from Census API
   census_data <- get_acs(geography, table = tableID, year = year, state = state, county = counties, 
-                         geometry = TRUE)
+                         geometry = FALSE)
 
 # }
   
@@ -52,7 +55,8 @@ format_Census <- function(geography,tableID,year,state,counties){
   geo <- geography
 
   # Complete list of variable names and their respective IDs
-  acs_variables <-  load_variables(yr, "acs5", cache = FALSE)
+  # acs_variables <-  load_variables(yr, "acs5", cache = FALSE)
+  acs_variables <- readRDS(paste("./data/acs_variables_",yr,".rds",sep=""))
   acs_variables %>% mutate(table_name = str_split_fixed(name, "_", 2)[,1]) -> acs_variables
   
   # Subset variable names based on variables of interest 
@@ -94,35 +98,28 @@ format_Census <- function(geography,tableID,year,state,counties){
     arrange(GEOID,variable) %>%
     select(-variable) %>%
     spread(variable_combined, value) %>%
-    mutate(Area_m2 = st_area(geometry))%>%
+    # mutate(Area_m2 = st_area(geometry))%>%
     mutate(Level = geo) %>%
     mutate(Vintage = yr) -> census_format
   
-  if (yr == 2014){
-    census_format %>%
-      st_zm(drop=TRUE, what ="ZM") -> census_format
-  }
+  # if (yr == 2014){
+  #   census_format %>%
+  #     st_zm(drop=TRUE, what ="ZM") -> census_format
+  # }
   
-  # Reproject to WGS 84 EPSG 4326 A.K.A. Google's Projection
-  census_format <- st_transform(census_format, 4326, use_gdal = T)
+  # Find and replace extra spaces
+  names(census_format) <- str_replace(names(census_format), "  "," ")
+  
+  # # Reproject to WGS 84 EPSG 4326 A.K.A. Google's Projection
+  # census_format <- st_transform(census_format, 4326, use_gdal = T)
   
   return(census_format)
 }
 
-# test_2015 <-  format_Census(state, counties, geo, tableID, 2015)
-# 
-# test_2014 <-  format_Census(state, counties, geo, tableID, 2014)
-# 
-# # test <- bind_rows(test_2015,test_2014)
-# 
-# # Option 2
-# test_2015[setdiff(names(test_2014), names(test_2015))] <- NA
-# test_2014[setdiff(names(test_2015), names(test_2014))] <- NA
-# t <- rbind(test_2015,test_2014)
-# 
-# 
-# # Strange issue with column names
-# # Error: Only strings can be converted to symbols
-# # Use option 2
-# t %>% select(NAME)
+
+# start <- Sys.time()
+# county_data_16 <- format_Census('block group',tableID,2016,state,counties)
+# end <- Sys.time()
+# end - start
+
 

@@ -21,7 +21,31 @@ census_api_key(Sys.getenv("CENSUS_API_KEY"))
 
 source("C:/Users/wPorter/GitHub/GNRC_Census_Explorer/GNRC_Shiny_App/format_CensusTable.R")
 
+# GEOMETRY ---------------------------------------------------------------
+
+# Create geometry object for joining geometry to data
+# df <- readRDS("./data/default_data.rds")
+# 
+# df %>%
+#   ungroup() %>%
+#   select(GEOID) -> geom
+# 
+# saveRDS(geom, "./data/geometry.rds")
+
 # VARIABLES --------------------------------------------------------------
+
+# acs_variables_16 <-  load_variables(2016, "acs5", cache = FALSE)
+# saveRDS(acs_variables_16,"./data/acs_variables_2016.rds")
+# acs_variables_15 <-  load_variables(2015, "acs5", cache = FALSE)
+# saveRDS(acs_variables_15,"./data/acs_variables_2015.rds")
+# acs_variables_14 <-  load_variables(2014, "acs5", cache = FALSE)
+# saveRDS(acs_variables_14,"./data/acs_variables_2014.rds")
+# acs_variables_13 <-  load_variables(2013, "acs5", cache = FALSE)
+# saveRDS(acs_variables_13,"./data/acs_variables_2013.rds")
+# acs_variables_12 <-  load_variables(2012, "acs5", cache = FALSE)
+# saveRDS(acs_variables_12,"./data/acs_variables_2012.rds")
+# acs_variables_11 <-  load_variables(2011, "acs5", cache = FALSE)
+# saveRDS(acs_variables_11,"./data/acs_variables_2011.rds")
 
 # Define variable TableIDs
 contract_rent <- "B25056"
@@ -99,88 +123,91 @@ state <- 'TN'
 # REQUEST DATA -------------------------------------------------------------
 tableID <- "B25056"
 
-request_data <- function(tableID)
+request_data <- function(tableID){
 
-county_data_16 <- format_Census('county',tableID,2016,state,counties)
-tract_data_16 <- format_Census('tract',tableID,2016,state,counties)
-bg_data_16 <- format_Census('block group',tableID,2016,state,counties)
-
-county_data_15 <- format_Census('county',tableID,2015,state,counties)
-tract_data_15 <- format_Census('tract',tableID,2015,state,counties)
-bg_data_15 <- format_Census('block group',tableID,2015,state,counties)
-
-county_data_14 <- format_Census('county',tableID,2014,state,counties)
-tract_data_14 <- format_Census('tract',tableID,2014,state,counties)
-bg_data_14 <- format_Census('block group',tableID,2014,state,counties)
-
-county_data_13 <- format_Census('county',tableID,2013,state,counties)
-tract_data_13 <- format_Census('tract',tableID,2013,state,counties)
-bg_data_13 <- format_Census('block group',tableID,2013,state,counties)
-
-county_data_12 <- format_Census('county',tableID,2012,state,counties)
-tract_data_12 <- format_Census('tract',tableID,2012,state,counties)
-bg_data_12 <- format_Census('block group',tableID,2012,state,counties)
-
-county_data_11 <- format_Census('county',tableID,2011,state,counties)
-tract_data_11 <- format_Census('tract',tableID,2011,state,counties)
-bg_data_11 <- format_Census('block group',tableID,2011,state,counties)
-
-
-a <-
-  rbind(
-    county_data_16,
-    tract_data_16,
-    bg_data_16,
-    county_data_15,
-    tract_data_15,
-    bg_data_15
-  )
-
-b <-
-  rbind(
-    county_data_14,
-    tract_data_14,
-    bg_data_14,
-    county_data_13,
-    tract_data_13,
-    bg_data_13,
-    county_data_12,
-    tract_data_12,
-    bg_data_12,
-    county_data_11,
-    tract_data_11,
-    bg_data_11
-  )
-
-# Prepare census data for row binding by filling mismatched columns with NA
-a[setdiff(names(b), names(a))] <- NA
-b[setdiff(names(a), names(b))] <- NA
-
-requested_data <- rbind(a,b)
+  county_data_16 <- format_Census('county',tableID,2016,state,counties)
+  tract_data_16 <- format_Census('tract',tableID,2016,state,counties)
+  bg_data_16 <- format_Census('block group',tableID,2016,state,counties)
+  
+  county_data_15 <- format_Census('county',tableID,2015,state,counties)
+  tract_data_15 <- format_Census('tract',tableID,2015,state,counties)
+  bg_data_15 <- format_Census('block group',tableID,2015,state,counties)
+  
+  county_data_14 <- format_Census('county',tableID,2014,state,counties)
+  tract_data_14 <- format_Census('tract',tableID,2014,state,counties)
+  bg_data_14 <- format_Census('block group',tableID,2014,state,counties)
+  
+  county_data_13 <- format_Census('county',tableID,2013,state,counties)
+  tract_data_13 <- format_Census('tract',tableID,2013,state,counties)
+  bg_data_13 <- format_Census('block group',tableID,2013,state,counties)
+  
+  county_data_12 <- format_Census('county',tableID,2012,state,counties)
+  tract_data_12 <- format_Census('tract',tableID,2012,state,counties)
+  bg_data_12 <- format_Census('block group',tableID,2012,state,counties)
+  
+  county_data_11 <- format_Census('county',tableID,2011,state,counties)
+  tract_data_11 <- format_Census('tract',tableID,2011,state,counties)
+  bg_data_11 <- format_Census('block group',tableID,2011,state,counties)
+  
+  
+  a <-
+    rbind(
+      county_data_16,
+      tract_data_16,
+      bg_data_16,
+      county_data_15,
+      tract_data_15,
+      bg_data_15
+    )
+  
+  b <-
+    rbind(
+      county_data_14,
+      tract_data_14,
+      bg_data_14,
+      county_data_13,
+      tract_data_13,
+      bg_data_13,
+      county_data_12,
+      tract_data_12,
+      bg_data_12,
+      county_data_11,
+      tract_data_11,
+      bg_data_11
+    )
+  
+  # Prepare census data for row binding by filling mismatched columns with NA
+  a[setdiff(names(b), names(a))] <- NA
+  b[setdiff(names(a), names(b))] <- NA
+  
+  requested_data <- rbind(a,b)
 
 return(requested_data)
+  }
   
-object.size(requested_data %>%
-  st_set_geometry(NULL))
+# object.size(requested_data %>%
+#   st_set_geometry(NULL))
+
+start <- Sys.time()
+contract_rent <- request_data("B25056")
+end <- Sys.time()
+end - start
 
 # WRITE DATA ---------------------------------------------------------------
 
-path = "C:/Users/wPorter/Data/Census/census_shapefiles/tidy_data/"
-save(census_format, file = paste(path,"sex_by_age_by_edu_formatted.rda", sep=''))
-
-#load("C:/Users/wPorter/Data/Census/census_shapefiles/tidy_data/sex_by_age_by_edu_formatted.rda")
+saveRDS(contract_rent,"./data/Contract Rent.rds")
 
 
-
-format_Census <- function(geography,tableID,year,state,counties){
-  
-  # Request data from Census API
-  census_data <- get_acs(geography, table = tableID, year = year, state = state, county = counties, 
-                         geometry = TRUE)
-  }
-
-
-bg_data_16 <- format_Census('block group',"B25056",2016,"TN",counties)
+# # Join data to spatial geometry
+# 
+# contract_rent %>%
+#   ungroup() %>%
+#   select(GEOID) -> geom
+# 
+# test %>% 
+#   left_join(geom, by = c("GEOID" = "GEOID")) -> t
+# 
+# t <- st_as_sf(t)
 
 
 
