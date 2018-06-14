@@ -172,12 +172,12 @@ server <-  function(input, output, session){
     else {
     
       attr <- colnames(selected_data())
-      attr[!attr %in% c("NAME","Vintage","Level","geometry")] 
+      attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")] 
       
       selectInput(
         "select_attr",
         label = h3("Map Attribute:"),
-        c("Please select an option below" = "", attr[!attr %in% c("NAME","Vintage","Level","geometry")])
+        c("Please select an option below" = "", attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")])
       )
     }
   })
@@ -291,8 +291,7 @@ server <-  function(input, output, session){
       
     } else {
       
-      # fc <- ~ colorQuantile("YlOrRd", Shellys_DI)(Shellys_DI)
-      fc <- ~ colorQuantile("YlOrRd", Shellys_DI)(Shellys_DI)
+      fc <- ~ colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]])
       
       filtered_data() %>%
             st_set_geometry(NULL) %>%

@@ -236,8 +236,14 @@ st_zm(county_di_2014,drop=TRUE, what ="ZM") -> county_di_2014
 
 ##########
 
+geom <- readRDS("./data/geometry.rds")
 
 test %>%
+  left_join(geom, by = c("GEOID" = "GEOID")) -> t
+
+t <- st_as_sf(t)
+
+t %>%
   ungroup %>%
   filter(Vintage == 2016 & Level == "county") -> f_cnty_data
 
@@ -247,12 +253,12 @@ leaflet(f_cnty_data) %>%
                    options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
   addPolygons(
     group = "county",
-    fillColor = ~ colorQuantile("YlOrRd", "Total Estimate")("Total Estimate"),
+    # fillColor = ~ colorQuantile("YlOrRd", f_cnty_data[["Total estimate"]])(f_cnty_data[["Total estimate"]]),
     fillOpacity = 0.5,
     weight = 2,
     stroke = T,
     color = "grey",
-    opacity = 1,
+    # opacity = 1,
     #dashArray = "3",
     highlight = highlightOptions(color = "white",weight = 3,bringToFront = TRUE),
     options = list(zIndex = 2),
@@ -264,8 +270,6 @@ leaflet(f_cnty_data) %>%
     options = providerTileOptions(zIndex = 3, pane = 'markerPane')
   ) %>%
   addLayersControl(overlayGroups = c("polygons", "labels"))
-
-
 
 di %>%
   filter(Vintage == 2016 & Level == "county") 
