@@ -153,7 +153,7 @@ server <-  function(input, output, session){
       tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
       
       tabular_data %>% 
-          left_join(geom, by = c("GEOID" = "GEOID")) -> t
+          left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
 
       st_as_sf(t)
       }

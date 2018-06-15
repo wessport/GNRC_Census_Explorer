@@ -238,13 +238,20 @@ st_zm(county_di_2014,drop=TRUE, what ="ZM") -> county_di_2014
 
 geom <- readRDS("./data/geometry.rds")
 
+test <- contract_rent_dt
+
+
+
+contract_rent_dt %>% filter(GEOID == "47021") -> test
+
+
+
 test %>%
-  left_join(geom, by = c("GEOID" = "GEOID")) -> t
+  left_join(geom, by = c("NAME" = "NAME", "Vintage" = "Vintage")) -> t
 
 t <- st_as_sf(t)
 
 t %>%
-  ungroup %>%
   filter(Vintage == 2016 & Level == "county") -> f_cnty_data
 
 leaflet(f_cnty_data) %>%
@@ -253,7 +260,7 @@ leaflet(f_cnty_data) %>%
                    options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
   addPolygons(
     group = "county",
-    # fillColor = ~ colorQuantile("YlOrRd", f_cnty_data[["Total estimate"]])(f_cnty_data[["Total estimate"]]),
+    fillColor = ~ colorQuantile("YlOrRd", f_cnty_data[["Total estimate"]])(f_cnty_data[["Total estimate"]]),
     fillOpacity = 0.5,
     weight = 2,
     stroke = T,
@@ -271,6 +278,7 @@ leaflet(f_cnty_data) %>%
   ) %>%
   addLayersControl(overlayGroups = c("polygons", "labels"))
 
+#####
 di %>%
   filter(Vintage == 2016 & Level == "county") 
 

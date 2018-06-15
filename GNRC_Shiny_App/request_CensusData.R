@@ -24,13 +24,13 @@ source("C:/Users/wPorter/GitHub/GNRC_Census_Explorer/GNRC_Shiny_App/format_Censu
 # GEOMETRY ---------------------------------------------------------------
 
 # Create geometry object for joining geometry to data
-# df <- readRDS("./data/default_data.rds")
-# 
-# df %>%
-#   ungroup() %>%
-#   select(GEOID) -> geom
-# 
-# saveRDS(geom, "./data/geometry.rds")
+df <- readRDS("./data/default_data.rds")
+
+df %>%
+  ungroup() %>%
+  select(NAME,Vintage) -> geom
+
+saveRDS(geom, "./data/geometry.rds")
 
 # VARIABLES --------------------------------------------------------------
 
@@ -313,8 +313,8 @@ poverty_status_dt <- request_data(tableID)
 saveRDS(poverty_status_dt,"./data/Poverty status in the past 12 months by age.rds")
 
 tableID <- "B02001"
-rave_dt <- request_data(tableID)
-saveRDS(rave_dt,"./data/Race.rds")
+race_dt <- request_data(tableID)
+saveRDS(race_dt,"./data/Race.rds")
 
 tableID <- "C17002"
 ratio_income_pov_dt <- request_data(tableID)
