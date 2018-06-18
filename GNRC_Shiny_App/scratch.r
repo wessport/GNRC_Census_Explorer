@@ -254,13 +254,18 @@ t <- st_as_sf(t)
 t %>%
   filter(Vintage == 2016 & Level == "county") -> f_cnty_data
 
+
+
+tryCatch(colorQuantile("YlOrRd", f_cnty_data[["With cash rent $2,000 to $2,499 estimate"]])(f_cnty_data[["With cash rent $2,000 to $2,499 estimate"]]), 
+         error=function(e) colorBin("YlOrRd", f_cnty_data[["With cash rent $2,000 to $2,499 estimate"]])(f_cnty_data[["With cash rent $2,000 to $2,499 estimate"]]))
+
 leaflet(f_cnty_data) %>%
   
   addProviderTiles(providers$CartoDB.PositronNoLabels,
                    options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
   addPolygons(
     group = "county",
-    fillColor = ~ colorQuantile("YlOrRd", f_cnty_data[["Total estimate"]])(f_cnty_data[["Total estimate"]]),
+    fillColor = ~ colorBin("YlOrRd", f_cnty_data[["With cash rent $2,000 to $2,499 estimate"]])(f_cnty_data[["With cash rent $2,000 to $2,499 estimate"]]),
     fillOpacity = 0.5,
     weight = 2,
     stroke = T,
@@ -295,5 +300,8 @@ di %>%
   group_by(NAME)%>% 
   plot_ly(x = ~Vintage, y = ~Shellys_DI, ylab = 'DI', color = ~NAME, colors = viridis_pal(option = "D")(3), name = ~NAME, type = 'scatter', mode = 'lines+markers')
 
+contract_rent_dt %>% filter(Vintage == 2016 & Level == 'county') -> temp
+
+sum(is.na(temp$`With cash rent $2,000 to $2,499 estimate`))
 
 

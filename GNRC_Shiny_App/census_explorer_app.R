@@ -88,7 +88,7 @@ ui <- fluidPage(
     ),
     
     column(8, offset = 1,
-           h4("Plot/Graph 1"),
+           h4(),
            plotlyOutput("plot1")
     ),
     
@@ -119,7 +119,7 @@ server <-  function(input, output, session){
     if(input$select_category == ""){}
     
     else if (input$select_category == 'Pop') {
-      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Diversity Indices', 'b', 'c'))
+      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Detailed Race','Diversity Indices', 'Population under 18 years by age', 'Sex by age', 'Total Population','Women 15 to 50 years who had a birth in the past 12 mo by marital status and age'))
     }
 
     else if (input$select_category == 'Tran') {
@@ -127,7 +127,7 @@ server <-  function(input, output, session){
     }
 
     else if (input$select_category == 'Housing') {
-      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Contract Rent', 'h', 'i'))
+      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Contract Rent', 'Gross Rent', 'Household income in the past 12 months', 'Housing Units'))
     }
 
     else if (input$select_category == 'Health') {
@@ -135,7 +135,7 @@ server <-  function(input, output, session){
     }
 
     else if (input$select_category == 'Emp') {
-      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'm', 'n', 'o'))
+      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Employment status for the population 16 years and over', 'n', 'o'))
     }
     
   })
@@ -172,7 +172,7 @@ server <-  function(input, output, session){
     else {
     
       attr <- colnames(selected_data())
-      attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")] 
+      # attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")] 
       
       selectInput(
         "select_attr",
@@ -289,9 +289,22 @@ server <-  function(input, output, session){
       
       c <- paste("<strong>", labels, "</strong>", sep = '')
       
+    } else if(sum(is.na(filtered_data()[[input$select_attr]]))>0){
+      
+      fc <- 'grey'
+      
+      filtered_data() %>%
+        st_set_geometry(NULL) %>%
+        pull("NAME") -> labels
+      
+      c <- paste("<strong>", labels, "</strong>", sep = '')
+      
     } else {
       
-      fc <- ~ colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]])
+      fc <- tryCatch(colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]),
+                     error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
+      
+      # fc <- ~ colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]])
       
       filtered_data() %>%
             st_set_geometry(NULL) %>%
