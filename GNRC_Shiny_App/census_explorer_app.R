@@ -11,7 +11,7 @@
 #                                                             #
 #                http://shiny.rstudio.com/                    #
 #                                                             #
-#               Last Updated: 08-JUNE-2018                    #
+#               Last Updated: 18-JUNE-2018                    #
 #                                                             #
 ###############################################################
 
@@ -119,23 +119,109 @@ server <-  function(input, output, session){
     if(input$select_category == ""){}
     
     else if (input$select_category == 'Pop') {
-      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Detailed Race','Diversity Indices', 'Population under 18 years by age', 'Sex by age', 'Total Population','Women 15 to 50 years who had a birth in the past 12 mo by marital status and age'))
+      selectInput(
+        "select_var",
+        label = h3("Variable:"),
+        c(
+          "Please select an option below" = "",
+          'Detailed Race',
+          'Diversity Indices',
+          'Population under 18 years by age',
+          'Race',
+          'School enrollment by level of school for the population 3 years and over',
+          'Sex by age',
+          'Sex by age by educational attainment for the population 18 years and over',
+          'Total Population',
+          'Women 15 to 50 years who had a birth in the past 12 mo by marital status and age'
+        )
+      )
     }
 
     else if (input$select_category == 'Tran') {
-      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'd', 'e', 'f'))
+      selectInput(
+        "select_var",
+        label = h3("Variable:"),
+        c(
+          "Please select an option below" = "",
+          'Means of transportation to work',
+          'Means of transportation to work by age',
+          'Means of transportation to work by class of worker',
+          'Means of transportation to work by poverty status in the past 12 mo',
+          'Means of transportation to work american indian and alaska native alone',
+          'Means of transportation to work asian alone',
+          'Means of transportation to work black or african american alone',
+          'Means of transportation to work hispanic or latino',
+          'Means of transportation to work native hawaiian and other pacific islander alone',
+          #'Means of transportation to work white alone',
+          'Means of transportation to work white alone not hispanic or latino',
+          'Means of transportation to work some other race alone',
+          'Means of transportation to work two or more races',
+          'Median age by means of transportation to work',
+          'Sex of workers by means of transportation to work',
+          'Sex of workers by travel time to work',
+          'Sex of workers by vehicles available',
+          'Time leaving home to go to work',
+          'Travel time to work'
+        )
+      )
     }
 
     else if (input$select_category == 'Housing') {
-      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Contract Rent', 'Gross Rent', 'Household income in the past 12 months', 'Housing Units'))
+      selectInput(
+        "select_var",
+        label = h3("Variable:"),
+        c(
+          "Please select an option below" = "",
+          'Contract Rent',
+          'Gross Rent',
+          'House heating fuel',
+          'Household income in the past 12 months',
+          'Household type including living alone',
+          'Household type for children under 18 years in households',
+          'Household type including living alone american indian and alaska native alone',
+          'Household type including living alone asian alone',
+          'Household type including living alone black or african american alone',
+          'Household type including living alone hispanic or latino',
+          'Household type including living alone native hawaiian and other pacific islander alone',
+          'Household type including living alone some other race alone',
+          'Household type including living alone white alone',
+          'Household type including living alone white alone nothispanic or latino',
+          'Household income in the past 12 months',
+          'Housing Units',
+          'Median monthly housing costs dollars',
+          'Median value dollars',
+          'Monthly housing costs',
+          'Mortage status and selected monthly owner costs',
+          'Occupancy status',
+          'Vacancy status',
+          'Value',
+          'Year structure built'
+        )
+      )
     }
-
+    
     else if (input$select_category == 'Health') {
-      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'j', 'k', 'l'))
+      selectInput(
+        "select_var",
+        label = h3("Variable:"),
+        c("Please select an option below" = "", 'Sex by age by disability status')
+      )
     }
-
+    
     else if (input$select_category == 'Emp') {
-      selectInput("select_var", label = h3("Variable:"), c("Please select an option below" = "", 'Employment status for the population 16 years and over', 'n', 'o'))
+      selectInput(
+        "select_var",
+        label = h3("Variable:"),
+        c(
+          "Please select an option below" = "",
+          'Employment status for the population 16 years and over',
+          'Mean usual hours worked in the past 12 months for workers 16 to 64 years',
+          'Median age by sex for workers 16 to 64 years',
+          'Ratio of income to poverty level of families in the past 12 months',
+          'Sex by age by employment status for the population 16 years and over',
+          'Sex by class of worker for the civilian employed population 16 years and over'
+        )
+      )
     }
     
   })
@@ -166,8 +252,6 @@ server <-  function(input, output, session){
     req(input$select_var)
     
     if (input$select_var == ''){}
-    
-    # else if (input$select_var == 'Diversity Indices') {
       
     else {
     
@@ -182,6 +266,17 @@ server <-  function(input, output, session){
     }
   })
   
+  # User switches data category
+  
+  observeEvent(input$select_category, updateSelectInput(session,input='select_var',selected=''))
+  observeEvent(input$select_category, updateSelectInput(session,input='select_attr',selected=''))
+
+  # User switches data variable
+  
+  eventReactive(input$select_var, updateSelectInput(session,input='select_attr',selected=''))
+
+  
+  # VINTAGE SLIDER
   output$slider <- renderUI({
     
     req(input$select_attr)
