@@ -84,7 +84,8 @@ ui <- fluidPage(
   fluidRow(
     
     column(3,
-           h4("Plot Controls")
+           uiOutput("plot_filter")
+           
     ),
     
     column(8, offset = 1,
@@ -278,22 +279,21 @@ server <-  function(input, output, session){
   
   # VINTAGE SLIDER
   output$slider <- renderUI({
-    
+
     req(input$select_attr)
-      
+
     sliderInput("yr", "Vintage:", min = 2011, max = 2016, value = 2016, sep = '', animate =
                     animationOptions(interval = 1200, loop = TRUE))
-      
     })
-    
+
   output$GeoSelection <- renderUI({
-    
+
     req(input$select_attr)
-    
+
     if (input$select_attr == ''){}
-    
+
     else {
-      
+
       selectInput(
         "select_geo",
         label = h3("Geographic Division:"),
@@ -305,15 +305,70 @@ server <-  function(input, output, session){
   
   # Map ------
   
-  filtered_data <- reactive({
-    
+  geo_level <- reactive({
+
     req(input$mymap_zoom)
-    
-    if (is.null(input$yr)){y <- 2016} 
-    else {y <- input$yr}
-    
+
     if(is.null(input$select_geo)){
-    
+
+      if (input$mymap_zoom <= 9) {
+        'county'
+      }
+      else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
+        'tract'
+      }
+      else if (input$mymap_zoom >= 13){
+        'block group'
+      }
+    }
+
+    else if (input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
+
+      if (input$mymap_zoom <= 9) {
+      'county'
+      }
+      else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
+      'tract'
+      }
+      else if (input$mymap_zoom >= 13){
+      'block group'
+      }
+    }
+
+    else if(input$select_geo == "County"){'county'}
+
+    else if(input$select_geo == "Tract"){'tract'}
+
+    else if(input$select_geo == "Block Group"){'block group'}
+  })
+  # 
+  # # Filter User Selected Data for Map 
+  # 
+  # filtered_data <- reactive({
+  # 
+  #   req(input$mymap_zoom)
+  # 
+  #   if (is.null(input$yr)) {
+  #     y <- 2016
+  #   }
+  #   else {
+  #     y <- input$yr
+  #   }
+  #   
+  #   selected_data() %>%
+  #     filter(Vintage == y & Level == geo_level())
+  # 
+  # })
+  
+  filtered_data <- reactive({
+
+    req(input$mymap_zoom)
+
+    if (is.null(input$yr)){y <- 2016}
+    else {y <- input$yr}
+
+    if(is.null(input$select_geo)){
+
       if (input$mymap_zoom <= 9) {
         geolevel <- 'county'
       }
@@ -324,9 +379,9 @@ server <-  function(input, output, session){
         geolevel <- 'block group'
       }
     }
-    
+
     else if (input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
-      
+
       if (input$mymap_zoom <= 9) {
       geolevel <- 'county'
       }
@@ -337,88 +392,106 @@ server <-  function(input, output, session){
         geolevel <- 'block group'
       }
     }
-    
+
     else if(input$select_geo == "County"){geolevel <- 'county'}
-    
+
     else if(input$select_geo == "Tract"){geolevel <- 'tract'}
-    
+
     else if(input$select_geo == "Block Group"){geolevel <- 'block group'}
-    
+
     selected_data() %>%
       filter(Vintage == y & Level == geolevel)
-    
+
   })
   
   output$mymap <- renderLeaflet({
 
     leaflet(di) %>%
-      addProviderTiles(providers$CartoDB.PositronNoLabels, options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>% 
-      setView(lat = 36.174465,lng = -86.767960,zoom = 8) 
+      addProviderTiles(providers$CartoDB.PositronNoLabels, options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
+      setView(lat = 36.174465,lng = -86.767960,zoom = 8)
         # %>%
         # addLayersControl(overlayGroups = c("polygons", "labels"))
-    
+
   })
   
-  
-  observe({
-    
+  # Fill Color Expression
+  fc <- reactive({
     req(input$mymap_zoom)
     
     if(is.null(input$select_attr)){
       
       fc <- 'grey'
+    }
+    
+    else if(input$select_attr==''){
       
-      filtered_data() %>%
-        st_set_geometry(NULL) %>%
-        pull("NAME") -> labels
+      'grey'
       
-      c <- paste("<strong>", labels, "</strong>", sep = '')
+    } else if (sum(is.na(filtered_data()[[input$select_attr]]))>0){
       
-    } else if(input$select_attr==''){
-      
-      fc <- 'grey'
-      
-      filtered_data() %>%
-        st_set_geometry(NULL) %>%
-        pull("NAME") -> labels
-      
-      c <- paste("<strong>", labels, "</strong>", sep = '')
-      
-    } else if(sum(is.na(filtered_data()[[input$select_attr]]))>0){
-      
-      fc <- 'grey'
-      
-      filtered_data() %>%
-        st_set_geometry(NULL) %>%
-        pull("NAME") -> labels
-      
-      c <- paste("<strong>", labels, "</strong>", sep = '')
+      # fc <- 'grey'
+      'grey'
       
     } else {
       
-      fc <- tryCatch(colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]),
-                     error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
-      
-      # fc <- ~ colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]])
+      tryCatch(colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]),
+               error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
+    }
+   
+  })
+  
+  label_txt <- reactive({
+    req(input$mymap_zoom)
+    
+    if(is.null(input$select_attr)){
       
       filtered_data() %>%
-            st_set_geometry(NULL) %>%
-            pull("NAME") -> labels
-
+        st_set_geometry(NULL) %>%
+        pull("NAME") -> labels
+      
+      paste("<strong>", labels, "</strong>", sep = '')
+    }
+    
+    else if(input$select_attr==''){
+      
+      filtered_data() %>%
+        st_set_geometry(NULL) %>%
+        pull("NAME") -> labels
+      
+      paste("<strong>", labels, "</strong>", sep = '')
+      
+    } else if (sum(is.na(filtered_data()[[input$select_attr]]))>0){
+      
+      filtered_data() %>%
+        st_set_geometry(NULL) %>%
+        pull("NAME") -> labels
+      
+      paste("<strong>", labels, "</strong>", sep = '')
+      
+    } else {
+      
+      filtered_data() %>%
+        st_set_geometry(NULL) %>%
+        pull("NAME") -> labels
+      
       filtered_data() %>%
         st_set_geometry(NULL) %>%
         ungroup() %>%
         pull(input$select_attr) %>%
         round(digits = 3) -> map_var
       
-      c <- paste("<strong>", labels, "</strong><br>", input$select_attr,": ", map_var, sep = '')
-
+      paste("<strong>",labels,"</strong><br>",input$select_attr,": ",map_var,sep = '')
     }
-    
+  })
+  
+  observe({
+
+    req(input$mymap_zoom,fc())
+
     leafletProxy("mymap", data = filtered_data()) %>%
       clearShapes() %>%
       addPolygons(
-        fillColor = fc,
+        fillColor = fc(),
         fillOpacity = 0.5,
         weight = 2,
         stroke = T,
@@ -426,48 +499,51 @@ server <-  function(input, output, session){
         opacity = 1,
         highlight = highlightOptions(color = "white",weight = 3,bringToFront = TRUE),
         options = list(zIndex = 2),
-        label = lapply(c, HTML)
+        label = lapply(label_txt(), HTML)
       ) %>%
       addProviderTiles(
         "CartoDB.PositronOnlyLabels",
         group = "labels",
         options = providerTileOptions(zIndex = 3, pane = 'markerPane')
       )
-    
+
   })
   
-  
+
   # Data Table -----
+
+  # output$data_table = DT::renderDataTable( selected_data(), options = list(lengthChange = FALSE),server=TRUE )
   
-  output$data_table <-
-    DT::renderDataTable({
-      selected_data()
-    }, options = list(columnDefs = list(list(
-      targets = ncol(selected_data()),
-      render = JS(
-        "function(data, type, row, meta) {",
-        "return type === 'display' && data.toString().length > 6 ?",
-        "'<span title=\"' + data + '\">' + data.toString().substr(0, 6) + '...</span>' : data;",
-        "}"
-      )
-    ))))
+  table_data <- reactive({
+    req(selected_data)
     
-  output$dt <- renderUI({
-    
-    req(input$select_var)
-    
-    if(is.null(input$select_var)){}
-    
-    else if (input$select_var == ''){}
-    
-    else {
-      
-      fluidRow(column(12), DT::dataTableOutput("data_table"))
-      
-    }
+    selected_data() %>% 
+      st_set_geometry(NULL)
     
   })
   
+  output$data_table = renderDT(
+    table_data(),
+    extensions = 'FixedHeader',
+    options = list(scrollX = TRUE, fixedHeader = TRUE)
+  )
+  
+  output$dt <- renderUI({
+
+    req(input$select_var)
+
+    if(is.null(input$select_var)){}
+
+    else if (input$select_var == ''){}
+
+    else {
+
+      fluidRow(column(12), DTOutput("data_table"))
+
+    }
+
+  })
+
   output$downloadData <- downloadHandler(
     filename = function() {
       paste(input$select_var, ".csv", sep = "")
@@ -476,67 +552,95 @@ server <-  function(input, output, session){
       write.csv((selected_data()%>%st_set_geometry(NULL)), file, row.names = FALSE)
     }
   )
-  
+
   output$download_dt <- renderUI({
-    
+
     req(input$select_var)
-    
+
     fluidRow(
-      
+
       column(10),downloadButton("downloadData", "Download Spreadsheet"))
   })
-  
-  
+
+
   # Plot1 -----
   
+  plot_data <- reactive({
+    
+    req(plot_divisions())
+    
+    if(input$selected_pfilter ==''){
+    
+    table_data() %>%
+      filter(Level == geo_level()) %>%
+      group_by(NAME)
+      
+    } else if(input$selected_pfilter =='All'){
+      
+    table_data() %>%
+      filter(Level == geo_level()) %>%
+      group_by(NAME)
+  
+    } else {
+      
+      table_data() %>%
+        filter(Level == geo_level() & NAME == input$selected_pfilter) %>%
+        group_by(NAME)
+      
+    }
+    
+    
+  })
+
   output$plot1 <- renderPlotly({
 
     req(input$select_attr)
-
-    di %>%
-      st_set_geometry(NULL) %>%
-      filter(Level == "county") %>%
-      group_by(NAME) %>%
+    
+    y <- list(
+      title = "Count")
+    
+    plot_data() %>%
       plot_ly(
         x = ~ Vintage,
-        y = ~ Shellys_DI,
+        y = ~ get(input$select_attr),
         color = ~ NAME,
         colors = viridis_pal(option = "D")(3),
-        name = ~ NAME,
+        hovertext = ~ NAME,
         type = 'scatter',
         mode = 'lines+markers'
-      ) %>% 
-      layout(updatemenus = list(list(
-        y = 0.8,
-        buttons = list(
-          list(
-            method = "restyle",
-            args = list("type", "scatter"),
-            label = "Scatter"
-          ),
-          
-          list(
-            method = "restyle",
-            args = list("type", "histogram2d"),
-            label = "2D Histogram"
-          )
-        )
-      )))
-    
+      ) %>%
+      layout(yaxis = y)
+
   })
   
+  plot_divisions <- reactive({
+    req(input$select_attr)
+    
+    table_data() %>%
+      filter(Level == geo_level()) %>%
+      select(NAME) %>%
+      distinct()
+
+  })
+  
+  output$plot_filter <- renderUI({ 
+    req(input$select_attr)
+    
+    selectInput(
+      "selected_pfilter",
+      label = h3("Filter Data Points by Division:"),
+      c("Please select an option below" = "", "All",plot_divisions())
+    )
+    
+  })
+
 # Test / Trouble shooting
 # output$test <- renderPrint({
-#   
-#   input$mymap_zoom
-#   
-#   filtered_data() %>%
-#     filter(Level == 'county') -> f_cnty_data
-#   
-#   f_cnty_data
-#   
+# 
+#   selected_data()
+# 
 # })
-  
+
 }
 
 shinyApp(ui, server)
