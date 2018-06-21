@@ -33,6 +33,7 @@ library(viridis)
 # load("./data/bg_di.RData")
 load("./data/di.RData")
 
+places <- readRDS("./data/places.rds")
 geom <- readRDS("./data/geometry.rds")
 
 # UI ----------------------------------------------------------------
@@ -282,7 +283,7 @@ server <-  function(input, output, session){
 
     req(input$select_attr)
 
-    sliderInput("yr", "Vintage:", min = 2011, max = 2016, value = 2016, sep = '', animate =
+    sliderInput("yr", "Map Vintage:", min = 2011, max = 2016, value = 2016, sep = '', animate =
                     animationOptions(interval = 1200, loop = TRUE))
     })
 
@@ -407,11 +408,21 @@ server <-  function(input, output, session){
   output$mymap <- renderLeaflet({
 
     leaflet(di) %>%
-      addProviderTiles(providers$CartoDB.PositronNoLabels, options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
-      setView(lat = 36.174465,lng = -86.767960,zoom = 8)
-        # %>%
-        # addLayersControl(overlayGroups = c("polygons", "labels"))
-
+      addTiles(group = "OSM") %>%
+      addProviderTiles(providers$CartoDB.PositronNoLabels, options = providerTileOptions(noWrap = TRUE, zIndex = 1), group = 'Carto DB') %>%
+      addProviderTiles(providers$Esri.WorldImagery, group = 'Esri World Imagery') %>%
+      addProviderTiles(
+        "CartoDB.PositronOnlyLabels",
+        group = "Esri World Imagery",
+        options = providerTileOptions(zIndex = 3, pane = 'markerPane')
+      ) %>% 
+      hideGroup('Esri World Imagery') %>%
+      setView(lat = 36.174465,lng = -86.767960,zoom = 8) %>%
+      addProviderTiles(
+        "CartoDB.PositronOnlyLabels",
+        group = "Carto DB",
+        options = providerTileOptions(zIndex = 3, pane = 'markerPane')
+      )
   })
   
   # Fill Color Expression
@@ -440,6 +451,7 @@ server <-  function(input, output, session){
    
   })
   
+  # Labels
   label_txt <- reactive({
     req(input$mymap_zoom)
     
@@ -484,6 +496,17 @@ server <-  function(input, output, session){
     }
   })
   
+  places_label_txt <- reactive({
+    req(input$mymap_zoom)
+    
+    places %>%
+      st_set_geometry(NULL) %>%
+      pull("NAME") -> plabels
+    
+    paste("<strong>", plabels, "</strong>", sep = '')
+    
+  })
+  
   observe({
 
     req(input$mymap_zoom,fc())
@@ -499,17 +522,29 @@ server <-  function(input, output, session){
         opacity = 1,
         highlight = highlightOptions(color = "white",weight = 3,bringToFront = TRUE),
         options = list(zIndex = 2),
-        label = lapply(label_txt(), HTML)
+        label = lapply(label_txt(), HTML),
+        group = 'Boundary'
       ) %>%
-      addProviderTiles(
-        "CartoDB.PositronOnlyLabels",
-        group = "labels",
-        options = providerTileOptions(zIndex = 3, pane = 'markerPane')
-      )
+      addPolygons(
+        data = places,
+        fillOpacity = 0,
+        weight = 2,
+        #stroke = T,
+        dashArray = '2',
+        color = "purple",
+        opacity = 0.5,
+        label = lapply(places_label_txt(),HTML),
+        group = 'Places'
+      ) %>%
+      
+      addLayersControl(
+        baseGroups = c('Carto DB', 'OSM','Esri World Imagery'),
+        overlayGroups = c('Places','Boundary'),
+        options = layersControlOptions(collapsed = TRUE)
+        )      
 
   })
   
-
   # Data Table -----
 
   # output$data_table = DT::renderDataTable( selected_data(), options = list(lengthChange = FALSE),server=TRUE )

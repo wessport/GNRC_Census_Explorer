@@ -238,13 +238,7 @@ st_zm(county_di_2014,drop=TRUE, what ="ZM") -> county_di_2014
 
 geom <- readRDS("./data/geometry.rds")
 
-test <- contract_rent_dt
-
-
-
-contract_rent_dt %>% filter(GEOID == "47021") -> test
-
-
+test <- readRDS("./data/Contract Rent.rds")
 
 test %>%
   left_join(geom, by = c("NAME" = "NAME", "Vintage" = "Vintage")) -> t
@@ -283,6 +277,42 @@ leaflet(f_cnty_data) %>%
   ) %>%
   addLayersControl(overlayGroups = c("polygons", "labels"))
 
+
+f_cnty_data %>%
+  mutate(perc=(get("With cash rent $2,000 to $2,499 estimate")/get("Total estimate"))*100) -> f_cnty_data
+
+f_cnty_data %>% ungroup() %>% summarise(sum(`Total estimate`)) %>% st_set_geometry(NULL) -> total
+
+f_cnty_data %>%
+  mutate(perc=(get("With cash rent $2,000 to $2,499 estimate")/total[[1]])*100) -> f_cnty_data
+
+tryCatch(colorQuantile("YlOrRd", f_cnty_data[["perc"]])(f_cnty_data[["perc"]]), 
+         error=function(e) colorBin("YlOrRd", f_cnty_data[["perc"]])(f_cnty_data[["perc"]]))
+
+leaflet(f_cnty_data) %>%
+  
+  addProviderTiles(providers$CartoDB.PositronNoLabels,
+                   options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
+  addPolygons(
+    group = "county",
+    fillColor = ~ colorBin("YlOrRd", f_cnty_data[["perc"]])(f_cnty_data[["perc"]]),
+    fillOpacity = 0.5,
+    weight = 2,
+    stroke = T,
+    color = "grey",
+    # opacity = 1,
+    #dashArray = "3",
+    highlight = highlightOptions(color = "white",weight = 3,bringToFront = TRUE),
+    options = list(zIndex = 2),
+    label = lapply(c, HTML)
+  ) %>%
+  addProviderTiles(
+    "CartoDB.PositronOnlyLabels",
+    group = "labels",
+    options = providerTileOptions(zIndex = 3, pane = 'markerPane')
+  ) %>%
+  addLayersControl(overlayGroups = c("polygons", "labels"))
+
 #####
 di %>%
   filter(Vintage == 2016 & Level == "county") 
@@ -304,4 +334,11 @@ contract_rent_dt %>% filter(Vintage == 2016 & Level == 'county') -> temp
 
 sum(is.na(temp$`With cash rent $2,000 to $2,499 estimate`))
 
+####
 
+
+places <- st_read("C:/Users/wPorter/Data/Census/census_shapefiles/boundaries/GNR/places/tl_2017_gnr_places_slim.shp")
+
+places %>% select(NAME) -> places
+
+saveRDS(places,"./data/places.rds")
