@@ -91,7 +91,8 @@ ui <- fluidPage(
     
     column(8, offset = 1,
            h4(),
-           plotlyOutput("plot1")
+           # plotlyOutput("plot1")
+           plotlyOutput("plot_histo")
     ),
     
     plotOutput("myplot")
@@ -305,105 +306,132 @@ server <-  function(input, output, session){
   
   
   # Map ------
+  values <- reactiveValues(zoom_level = 8,geo_level = 'county')
   
-  geo_level <- reactive({
-
-    req(input$mymap_zoom)
-
+  observeEvent(input$mymap_zoom,{
+    z_level <- input$mymap_zoom
+    
     if(is.null(input$select_geo)){
-
-      if (input$mymap_zoom <= 9) {
-        'county'
-      }
-      else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
-        'tract'
-      }
-      else if (input$mymap_zoom >= 13){
-        'block group'
-      }
+    
+      if(z_level <= 9 & values$geo_level != 'county') {values$geo_level <- 'county'} 
+      else if(z_level > 9 & z_level < 13 & values$geo_level != 'tract')  {values$geo_level <- 'tract'}
+      else if(z_level >= 13 & values$geo_level != 'block group') {values$geo_level <- 'block group'}
     }
-
-    else if (input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
-
-      if (input$mymap_zoom <= 9) {
-      'county'
-      }
-      else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
-      'tract'
-      }
-      else if (input$mymap_zoom >= 13){
-      'block group'
-      }
+    else if(input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
+      if(z_level <= 9 & values$geo_level != 'county') {values$geo_level <- 'county'} 
+      else if(z_level > 9 & z_level < 13 & values$geo_level != 'tract')  {values$geo_level <- 'tract'}
+      else if(z_level >= 13 & values$geo_level != 'block group') {values$geo_level <- 'block group'}
     }
+    else if(input$select_geo == "County"){values$geo_level <- 'county'}
 
-    else if(input$select_geo == "County"){'county'}
+    else if(input$select_geo == "Tract"){values$geo_level <- 'tract'}
 
-    else if(input$select_geo == "Tract"){'tract'}
-
-    else if(input$select_geo == "Block Group"){'block group'}
+    else if(input$select_geo == "Block Group"){values$geo_level <- 'block group'}
   })
-  # 
-  # # Filter User Selected Data for Map 
-  # 
-  # filtered_data <- reactive({
-  # 
+  
+  # geo_level <- reactive({
+  #   
   #   req(input$mymap_zoom)
-  # 
-  #   if (is.null(input$yr)) {
-  #     y <- 2016
-  #   }
-  #   else {
-  #     y <- input$yr
+  #   
+  #   if(is.null(input$select_geo)){
+  #     
+  #     if (input$mymap_zoom <= 9) {
+  #       'county'
+  #     }
+  #     else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
+  #       'tract'
+  #     }
+  #     else if (input$mymap_zoom >= 13){
+  #       'block group'
+  #     }
   #   }
   #   
-  #   selected_data() %>%
-  #     filter(Vintage == y & Level == geo_level())
-  # 
+  #   else if (input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
+  #     
+  #     if (input$mymap_zoom <= 9) {
+  #       'county'
+  #     }
+  #     else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
+  #       'tract'
+  #     }
+  #     else if (input$mymap_zoom >= 13){
+  #       'block group'
+  #     }
+  #   }
+  #   
+  #   else if(input$select_geo == "County"){'county'}
+  #   
+  #   else if(input$select_geo == "Tract"){'tract'}
+  #   
+  #   else if(input$select_geo == "Block Group"){'block group'}
   # })
-  
+
+  # Filter User Selected Data for Map
+
   filtered_data <- reactive({
 
-    req(input$mymap_zoom)
+    # req(values$geo_level)
 
-    if (is.null(input$yr)){y <- 2016}
-    else {y <- input$yr}
-
-    if(is.null(input$select_geo)){
-
-      if (input$mymap_zoom <= 9) {
-        geolevel <- 'county'
-      }
-      else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
-        geolevel <- 'tract'
-      }
-      else if (input$mymap_zoom >= 13){
-        geolevel <- 'block group'
-      }
+    if (is.null(input$yr)) {
+      y <- 2016
+    }
+    else {
+      y <- input$yr
     }
 
-    else if (input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
-
-      if (input$mymap_zoom <= 9) {
-      geolevel <- 'county'
-      }
-      else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
-        geolevel <- 'tract'
-      }
-      else if (input$mymap_zoom >= 13){
-        geolevel <- 'block group'
-      }
-    }
-
-    else if(input$select_geo == "County"){geolevel <- 'county'}
-
-    else if(input$select_geo == "Tract"){geolevel <- 'tract'}
-
-    else if(input$select_geo == "Block Group"){geolevel <- 'block group'}
-
+    # selected_data() %>%
+    #   filter(Vintage == y & Level == values$geo_level)
+    
     selected_data() %>%
-      filter(Vintage == y & Level == geolevel)
+      filter(Vintage == y & Level == values$geo_level)
 
   })
+  
+  # filtered_data <- reactive({
+  # 
+  #   # req(input$mymap_zoom)
+  #   req(input$select_category)
+  # 
+  #   if (is.null(input$yr)){y <- 2016}
+  #   else {y <- input$yr}
+  # 
+  #   if(is.null(input$select_geo)){
+  #     
+  #     if (input$mymap_zoom <= 9) {
+  #       geolevel <- 'county'
+  #     }
+  # 
+  #     else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
+  #       geolevel <- 'tract'
+  #     }
+  #     else if (input$mymap_zoom >= 13){
+  #       geolevel <- 'block group'
+  #     }
+  #   }
+  # 
+  #   else if (input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
+  # 
+  #     if (input$mymap_zoom <= 9) {
+  #     geolevel <- 'county'
+  #     }
+  #     else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
+  #       geolevel <- 'tract'
+  #     }
+  #     else if (input$mymap_zoom >= 13){
+  #       geolevel <- 'block group'
+  #     }
+  #   }
+  # 
+  #   else if(input$select_geo == "County"){geolevel <- 'county'}
+  # 
+  #   else if(input$select_geo == "Tract"){geolevel <- 'tract'}
+  # 
+  #   else if(input$select_geo == "Block Group"){geolevel <- 'block group'}
+  # 
+  #   selected_data() %>%
+  #     filter(Vintage == y & Level == geolevel)
+  # 
+  # })
   
   output$mymap <- renderLeaflet({
 
@@ -427,7 +455,7 @@ server <-  function(input, output, session){
   
   # Fill Color Expression
   fc <- reactive({
-    req(input$mymap_zoom)
+    # req(input$mymap_zoom)
     
     if(is.null(input$select_attr)){
       
@@ -453,7 +481,7 @@ server <-  function(input, output, session){
   
   # Labels
   label_txt <- reactive({
-    req(input$mymap_zoom)
+    # req(input$mymap_zoom)
     
     if(is.null(input$select_attr)){
       
@@ -497,7 +525,8 @@ server <-  function(input, output, session){
   })
   
   places_label_txt <- reactive({
-    req(input$mymap_zoom)
+    # req(input$mymap_zoom)
+    req(fc())
     
     places %>%
       st_set_geometry(NULL) %>%
@@ -509,7 +538,7 @@ server <-  function(input, output, session){
   
   observe({
 
-    req(input$mymap_zoom,fc())
+    # req(input$mymap_zoom,fc())
 
     leafletProxy("mymap", data = filtered_data()) %>%
       clearShapes() %>%
@@ -525,6 +554,19 @@ server <-  function(input, output, session){
         label = lapply(label_txt(), HTML),
         group = 'Boundary'
       ) %>%
+      
+      addLayersControl(
+        baseGroups = c('Carto DB', 'OSM','Esri World Imagery'),
+        overlayGroups = c('Places','Boundary'),
+        options = layersControlOptions(collapsed = TRUE)
+        )      
+
+  })
+  
+  observe({
+    
+    leafletProxy("mymap", data = places) %>%
+      clearGroup('Places') %>%
       addPolygons(
         data = places,
         fillOpacity = 0,
@@ -536,13 +578,8 @@ server <-  function(input, output, session){
         label = lapply(places_label_txt(),HTML),
         group = 'Places'
       ) %>%
-      
-      addLayersControl(
-        baseGroups = c('Carto DB', 'OSM','Esri World Imagery'),
-        overlayGroups = c('Places','Boundary'),
-        options = layersControlOptions(collapsed = TRUE)
-        )      
-
+      hideGroup('Places')
+    
   })
   
   # Data Table -----
@@ -607,24 +644,24 @@ server <-  function(input, output, session){
     if(input$selected_pfilter ==''){
     
     table_data() %>%
-      filter(Level == geo_level()) %>%
+      filter(Level == values$geo_level) %>%
       group_by(NAME)
       
     } else if(input$selected_pfilter =='All'){
       
     table_data() %>%
-      filter(Level == geo_level()) %>%
+      filter(Level == values$geo_level) %>%
       group_by(NAME)
   
     } else {
       
       table_data() %>%
-        filter(Level == geo_level() & NAME == input$selected_pfilter) %>%
+        filter(Level == values$geo_level & NAME == input$selected_pfilter) %>%
         group_by(NAME)
       
     }
     
-    
+
   })
 
   output$plot1 <- renderPlotly({
@@ -644,15 +681,20 @@ server <-  function(input, output, session){
         type = 'scatter',
         mode = 'lines+markers'
       ) %>%
-      layout(yaxis = y)
-
+      layout(title=input$select_attr,yaxis = y)
+  })
+  
+  output$plot_histo <- renderPlotly({
+    
+    plot_data()%>%
+      plot_ly(x = ~ get(input$select_attr), type = "histogram")
   })
   
   plot_divisions <- reactive({
     req(input$select_attr)
     
     table_data() %>%
-      filter(Level == geo_level()) %>%
+      filter(Level == values$geo_level) %>%
       select(NAME) %>%
       distinct()
 
@@ -672,7 +714,7 @@ server <-  function(input, output, session){
 # Test / Trouble shooting
 # output$test <- renderPrint({
 # 
-#   selected_data()
+#   zoom_level()
 # 
 # })
 
