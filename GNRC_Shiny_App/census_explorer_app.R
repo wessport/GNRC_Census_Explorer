@@ -84,25 +84,25 @@ ui <- fluidPage(
   hr(),
   
   fluidRow(
-    
+
     column(3,
            uiOutput("plot_filter_county"),
            uiOutput("plot_filter_tract"),
            uiOutput("plot_filter_bg")
-           
+
     ),
-    
+
     column(8, offset = 1,
            h4(),
            plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5))
            # plotlyOutput("plot_histo")
     )
   ),
-  
+
   hr(),
-  
+
   uiOutput("dt"),
-  
+
   uiOutput("download_dt")
   
   # textOutput("test")
@@ -114,15 +114,13 @@ ui <- fluidPage(
 
 server <-  function(input, output, session){
   
-  # Select box widget for user variable selection
+  # Render UI elements -----
   
   output$secondSelection <- renderUI({
     
     req(input$select_category)
     
-    if(input$select_category == ""){}
-    
-    else if (input$select_category == 'Pop') {
+    if (input$select_category == 'Pop') {
       selectInput(
         "select_var",
         label = h3("Category:"),
@@ -230,83 +228,81 @@ server <-  function(input, output, session){
     
   })
   
-  # Load data by user selection
-  
-  selected_data <-  reactive({
-    
-    if(is.null(input$select_var)){readRDS("./data/default_data.rds")}
-    
-    else if (input$select_var == ""){readRDS("./data/default_data.rds")}
-    
-    else {
-      
-      tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
-      
-      tabular_data %>% 
-          left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
 
-      st_as_sf(t)
-      }
-    
-  })
-  
+  # Render Select Variable
   
   output$thirdSelection <- renderUI({ 
     
     req(input$select_var)
     
-    if (input$select_var == ''){}
-      
-    else {
+    attr <- colnames(selected_data())
     
-      attr <- colnames(selected_data())
-      # attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")] 
-      
-      selectInput(
-        "select_attr",
-        label = h3("Variable:"),
-        c("Please select an option below" = "", attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")])
-      )
-    }
+    selectInput(
+      "select_attr",
+      label = h3("Variable:"),
+      c("Please select an option below" = "", attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")])
+    )
   })
   
-  # User switches data category
+  # User switches data Topic
   
-  observeEvent(input$select_category, updateSelectInput(session,input='select_var',selected=''))
-  observeEvent(input$select_category, updateSelectInput(session,input='select_attr',selected=''))
+  # observeEvent(input$select_category, updateSelectInput(session,input='select_var',selected=''))
+  # observeEvent(input$select_category, updateSelectInput(session,input='select_attr',selected=''))
+  # 
+  # # User switches data category(variable old)
+  # 
+  # eventReactive(input$select_var, updateSelectInput(session,input='select_attr',selected=''))
 
-  # User switches data variable
+  # Geographic Boundary
   
-  eventReactive(input$select_var, updateSelectInput(session,input='select_attr',selected=''))
-
-  
-  # VINTAGE SLIDER
-  output$slider <- renderUI({
-
-    req(input$select_attr)
-
-    sliderInput("yr", "Data Vintage:", min = 2011, max = 2016, value = 2016, sep = '', animate =
-                    animationOptions(interval = 1200, loop = TRUE))
-    })
-
   output$GeoSelection <- renderUI({
-
+    
     req(input$select_attr)
-
-    if (input$select_attr == ''){}
-
-    else {
-
+    
+    # if (input$select_attr == ''){}
+    
+    # else {
+      
       selectInput(
         "select_geo",
         label = h3("Geographic Division:"),
         c("Please select an option below" = "", "Automatic by Zoom Level","County","Tract","Block Group")
       )
-    }
+    # }
   })
   
+  # Vintage slider
+  output$slider <- renderUI({
+
+    req(input$select_attr)
+
+    sliderInput("yr", "Data Vintage:", min = 2011, max = 2016, value = 2016, sep = '')
+    })
+
   
-  # Map ------
+  # Load data by user selection ----
+  
+  selected_data <-  reactive({
+    
+    req(input$select_var)
+    
+    # if(is.null(input$select_var)){readRDS("./data/default_data.rds")}
+    # 
+    # else if (input$select_var == ""){readRDS("./data/default_data.rds")}
+    # 
+    # else {
+      
+      tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
+      
+      tabular_data %>% 
+        left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
+      
+      st_as_sf(t)
+    # }
+    
+  })
+  
+  # Map - Zoom Level ------
   values <- reactiveValues(zoom_level = 8,geo_level = 'county')
   
   observeEvent(input$mymap_zoom,{
@@ -330,48 +326,12 @@ server <-  function(input, output, session){
     else if(input$select_geo == "Block Group"){values$geo_level <- 'block group'}
   })
   
-  # geo_level <- reactive({
-  #   
-  #   req(input$mymap_zoom)
-  #   
-  #   if(is.null(input$select_geo)){
-  #     
-  #     if (input$mymap_zoom <= 9) {
-  #       'county'
-  #     }
-  #     else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
-  #       'tract'
-  #     }
-  #     else if (input$mymap_zoom >= 13){
-  #       'block group'
-  #     }
-  #   }
-  #   
-  #   else if (input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
-  #     
-  #     if (input$mymap_zoom <= 9) {
-  #       'county'
-  #     }
-  #     else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
-  #       'tract'
-  #     }
-  #     else if (input$mymap_zoom >= 13){
-  #       'block group'
-  #     }
-  #   }
-  #   
-  #   else if(input$select_geo == "County"){'county'}
-  #   
-  #   else if(input$select_geo == "Tract"){'tract'}
-  #   
-  #   else if(input$select_geo == "Block Group"){'block group'}
-  # })
 
-  # Filter User Selected Data for Map
+  # Map - Filter Data -----
 
   filtered_data <- reactive({
-
-    # req(values$geo_level)
+    
+    req(selected_data())
 
     if (is.null(input$yr)) {
       y <- 2016
@@ -379,64 +339,24 @@ server <-  function(input, output, session){
     else {
       y <- input$yr
     }
-
-    # selected_data() %>%
-    #   filter(Vintage == y & Level == values$geo_level)
     
+    if(is.null(values$geo_level)){
+      
+      selected_data() %>%
+        filter(Vintage == y & Level == 'county')
+    
+    } else {
+
     selected_data() %>%
       filter(Vintage == y & Level == values$geo_level)
-
+    }
   })
   
-  # filtered_data <- reactive({
-  # 
-  #   # req(input$mymap_zoom)
-  #   req(input$select_category)
-  # 
-  #   if (is.null(input$yr)){y <- 2016}
-  #   else {y <- input$yr}
-  # 
-  #   if(is.null(input$select_geo)){
-  #     
-  #     if (input$mymap_zoom <= 9) {
-  #       geolevel <- 'county'
-  #     }
-  # 
-  #     else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
-  #       geolevel <- 'tract'
-  #     }
-  #     else if (input$mymap_zoom >= 13){
-  #       geolevel <- 'block group'
-  #     }
-  #   }
-  # 
-  #   else if (input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
-  # 
-  #     if (input$mymap_zoom <= 9) {
-  #     geolevel <- 'county'
-  #     }
-  #     else if (input$mymap_zoom > 9 & input$mymap_zoom < 13){
-  #       geolevel <- 'tract'
-  #     }
-  #     else if (input$mymap_zoom >= 13){
-  #       geolevel <- 'block group'
-  #     }
-  #   }
-  # 
-  #   else if(input$select_geo == "County"){geolevel <- 'county'}
-  # 
-  #   else if(input$select_geo == "Tract"){geolevel <- 'tract'}
-  # 
-  #   else if(input$select_geo == "Block Group"){geolevel <- 'block group'}
-  # 
-  #   selected_data() %>%
-  #     filter(Vintage == y & Level == geolevel)
-  # 
-  # })
+  # Map - Render Leaflet Tiles -----
   
   output$mymap <- renderLeaflet({
 
-    leaflet(di) %>%
+    leaflet() %>%
       addTiles(group = "OSM") %>%
       addProviderTiles(providers$CartoDB.PositronNoLabels, options = providerTileOptions(noWrap = TRUE, zIndex = 1), group = 'Carto DB') %>%
       addProviderTiles(providers$Esri.WorldImagery, group = 'Esri World Imagery') %>%
@@ -454,80 +374,64 @@ server <-  function(input, output, session){
       )
   })
   
-  # Fill Color Expression
+  # Map - Fill Color -----
   fc <- reactive({
-    # req(input$mymap_zoom)
-    
+
+    req(input$select_attr)
+
     if(is.null(input$select_attr)){
-      
+
       fc <- 'grey'
     }
-    
+
     else if(input$select_attr==''){
-      
+
       'grey'
-      
+
     } else if (sum(is.na(filtered_data()[[input$select_attr]]))>0){
-      
-      # fc <- 'grey'
+
       'grey'
-      
+
     } else {
-      
+
       tryCatch(colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]),
                error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
     }
-   
+
   })
   
-  # Labels
+  # Map - Labels -----
   label_txt <- reactive({
-    # req(input$mymap_zoom)
+
+    req(fc())
     
     if(is.null(input$select_attr)){
       
-      filtered_data() %>%
-        st_set_geometry(NULL) %>%
-        pull("NAME") -> labels
-      
-      paste("<strong>", labels, "</strong>", sep = '')
-    }
+      paste("<strong>", 'Attr NULL', "</strong>", sep = '')
     
-    else if(input$select_attr==''){
-      
-      filtered_data() %>%
-        st_set_geometry(NULL) %>%
-        pull("NAME") -> labels
-      
-      paste("<strong>", labels, "</strong>", sep = '')
-      
-    } else if (sum(is.na(filtered_data()[[input$select_attr]]))>0){
-      
-      filtered_data() %>%
-        st_set_geometry(NULL) %>%
-        pull("NAME") -> labels
-      
-      paste("<strong>", labels, "</strong>", sep = '')
+    } else if (input$select_attr ==''){
+        
+      paste("<strong>", 'Attr default', "</strong>", sep = '')
       
     } else {
-      
+
       filtered_data() %>%
         st_set_geometry(NULL) %>%
         pull("NAME") -> labels
-      
+
       filtered_data() %>%
         st_set_geometry(NULL) %>%
         ungroup() %>%
         pull(input$select_attr) %>%
         round(digits = 3) -> map_var
-      
+
       paste("<strong>",labels,"</strong><br>",input$select_attr,": ",map_var,sep = '')
-    }
+
+      }
+
   })
   
   places_label_txt <- reactive({
-    # req(input$mymap_zoom)
-    req(fc())
     
     places %>%
       st_set_geometry(NULL) %>%
@@ -584,8 +488,6 @@ server <-  function(input, output, session){
   })
   
   # Data Table -----
-
-  # output$data_table = DT::renderDataTable( selected_data(), options = list(lengthChange = FALSE),server=TRUE )
   
   table_data <- reactive({
     req(selected_data)
@@ -637,108 +539,110 @@ server <-  function(input, output, session){
 
 
   # Filter Plot Data -----
-  # based on user input 
-  
+  # based on user input
+
   plot_data <- reactive({
-    
-    req(county_names())
-    
+
+    # req(county_names())
+    req(input$select_attr)
+
     # User selects County
-    
+
     if(values$geo_level == 'county'){
-      
+
       if(input$selected_cfilter ==''){
-      
+
       table_data() %>%
         filter(Level == values$geo_level) %>%
         group_by(NAME)
-        
+
       } else if(input$selected_cfilter =='All'){
-        
+
       table_data() %>%
         filter(Level == values$geo_level) %>%
         group_by(NAME)
-    
+
       } else {
-        
+
         table_data() %>%
           filter(Level == values$geo_level & NAME == input$selected_cfilter) %>%
           group_by(NAME)
-        
+
       }
-      
-    # User selects Tract 
-      
+
+    # User selects Tract
+
     } else if (values$geo_level == 'tract'){
-      
+
         if(input$selected_cfilter ==''){
           table_data() %>%
             filter(Level == values$geo_level & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) %>%
             group_by(NAME)
-    
+
         } else if(input$selected_cfilter !='' & (input$selected_tfilter == ''|input$selected_tfilter == 'All')){
-          
+
           table_data() %>%
             filter(Level == values$geo_level & grepl(input$selected_cfilter,NAME, fixed = TRUE)) %>%
             group_by(NAME)
-       
+
        } else{
-          
+
           table_data() %>%
             filter(Level == values$geo_level & grepl(input$selected_tfilter,NAME, fixed = TRUE)) %>%
             group_by(NAME)
         }
-      
-        
+
+    # User selects block Group
+
     } else if(values$geo_level == 'block group'){
-      
+
       if(input$selected_cfilter =='' & input$selected_tfilter =='' & input$selected_bgfilter ==''){
         table_data() %>%
           filter(Level == values$geo_level & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) %>%
           group_by(NAME)
-        
+
       } else if (input$selected_cfilter !='' & (input$selected_tfilter =='' | input$selected_tfilter =='All') & (input$selected_bgfilter == ''|input$selected_bgfilter == 'All')){
-        
+
         table_data() %>%
           filter(Level == values$geo_level & grepl(input$selected_cfilter,NAME, fixed = TRUE)) %>%
           group_by(NAME)
-      
+
       } else if(input$selected_cfilter !='' & input$selected_tfilter !='' & (input$selected_bgfilter == ''|input$selected_bgfilter == 'All')){
-        
+
         table_data() %>%
           filter(Level == values$geo_level & grepl(input$selected_tfilter,NAME, fixed = TRUE)) %>%
           group_by(NAME)
-        
+
       } else{
-        
+
         table_data() %>%
           filter(Level == values$geo_level & grepl(input$selected_bgfilter,NAME, fixed = TRUE)) %>%
           group_by(NAME)
       }
-      
+
     }
-    
+
 
   })
-  
-  
-  
+
+
+
   # Plot Controls ----
-  
-  # Collect County, Tract, and Block Group names for plot filtering 
-  
+
+  # Collect County, Tract, and Block Group names for plot filtering
+
   county_names <- reactive({
     req(input$select_attr)
-    
+
     table_data() %>%
       filter(Level == 'county') %>%
       select(NAME) %>%
       distinct()
-    
+
   })
-  
+
   tract_names <- reactive({
-    
+
     if(input$selected_cfilter == ""){
       table_data() %>%
         filter(Level == 'tract' & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) %>%
@@ -754,12 +658,12 @@ server <-  function(input, output, session){
         filter(Level == 'tract' & grepl(input$selected_cfilter,NAME, fixed = TRUE)) %>%
         select(NAME) %>%
         distinct()
-      
+
     }
   })
-  
+
   blockgroup_names <- reactive({
-    
+
     if(input$selected_cfilter == "" & (input$selected_tfilter == "" |input$selected_tfilter == "All")){
       table_data() %>%
         filter(Level == 'block group'& grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) %>%
@@ -770,14 +674,15 @@ server <-  function(input, output, session){
         filter(Level == 'block group' & grepl(input$selected_tfilter,NAME, fixed = TRUE)) %>%
         select(NAME) %>%
         distinct()
-      
+
     }
   })
-  
+
   # Reactively render selectInput boxes based on selected geo level
-  output$plot_filter_county <- renderUI({ 
+  output$plot_filter_county <- renderUI({
+
     req(input$select_attr)
-    
+
     if(values$geo_level=='county'){
       selectInput(
         "selected_cfilter",
@@ -790,123 +695,130 @@ server <-  function(input, output, session){
         label = h3("Filter Data Points by County:"),
         c("Davidson County, Tennessee" = "", county_names())
       )
-    } 
-    
+    }
+
   })
-    
-  output$plot_filter_tract <- renderUI({ 
-    
-    if(values$geo_level == 'tract'){  
+
+  output$plot_filter_tract <- renderUI({
+
+    req(input$select_attr)
+
+    if(values$geo_level == 'tract'){
       selectInput(
         "selected_tfilter",
         label = h3("Filter Data Points by Tract:"),
         c("Please select an option below" = "", "All",tract_names())
       )
     } else if (values$geo_level == 'block group'){
-      
+
       selectInput(
         "selected_tfilter",
         label = h3("Filter Data Points by Tract:"),
         c("Please select an option below" = "", "All",tract_names())
       )
-      
+
     }
-    
+
   })
-  
-  output$plot_filter_bg <- renderUI({ 
-    
+
+  output$plot_filter_bg <- renderUI({
+
+    req(input$select_attr)
+
     if(values$geo_level == 'block group'){
-      
+
       req(!is.null(input$selected_tfilter))
-      
+
       selectInput(
         "selected_bgfilter",
         label = h3("Filter Data Points by Block Group:"),
         c("Please select an option below" = "", "All",blockgroup_names())
       )
     }
-    
+
   })
-  
+
   # Plots -----
-  
+
   # Plot Title
-  
+
   plot_title <- reactive({
-    
+
+    req(input$select_attr)
+
     if(values$geo_level == 'county'){
       if(input$selected_cfilter == '' | input$selected_cfilter == 'All'){
-      
+
         input$select_attr
-      
+
       } else { paste(input$select_attr,input$selected_cfilter, sep = '<br>')}
-      
+
     } else if(values$geo_level == 'tract'){
-      
+
       if(input$selected_cfilter == '' & (input$selected_tfilter == '' |input$selected_tfilter == 'All')){
-        
+
           paste(input$select_attr, 'Davidson County, Tennessee', sep = '<br>')
-        
-      } else if (input$selected_cfilter != '' & (input$selected_tfilter == '' | input$selected_tfilter == 'All')){ 
-        
+
+      } else if (input$selected_cfilter != '' & (input$selected_tfilter == '' | input$selected_tfilter == 'All')){
+
         paste(input$select_attr, input$selected_cfilter, sep = '<br>')
-        
+
       } else if (input$selected_cfilter == '' & input$selected_tfilter != ''){
-        
+
           paste(input$select_attr, input$selected_tfilter, sep = '<br>')
       } else {
-        
+
         paste(input$select_attr, input$selected_tfilter, sep = '<br>')
       }
-      
+
     } else if (values$geo_level == 'block group'){
-      
+
       if(input$selected_cfilter == '' &
          (input$selected_tfilter == '' | input$selected_tfilter == 'All') &
          (input$selected_bgfilter == '' | input$selected_bgfilter == 'All')) {
 
           paste(input$select_attr, 'Davidson County, Tennessee', sep = '<br>')
 
-      } else if (input$selected_cfilter != '' & 
-                 (input$selected_tfilter == '' | input$selected_tfilter == 'All') & 
+      } else if (input$selected_cfilter != '' &
+                 (input$selected_tfilter == '' | input$selected_tfilter == 'All') &
                  (input$selected_bgfilter == '' | input$selected_bgfilter == 'All')){
-        
+
         paste(input$select_attr, input$selected_cfilter, sep = '<br>')
-      
+
       } else if (input$selected_cfilter == '' & input$selected_tfilter != '' & input$selected_bgfilter == ''){
-        
+
         paste(input$select_attr, input$selected_tfilter, sep = '<br>')
-        
+
       } else if (input$selected_cfilter == '' & input$selected_tfilter == '' & input$selected_bgfilter != ''){
-        
+
         paste(input$select_attr, input$selected_bgfilter, sep = '<br>')
-          
+
       } else if (input$selected_cfilter != '' & input$selected_tfilter != '' & (input$selected_bgfilter == '' | input$selected_bgfilter == 'All')){
-        
+
         paste(input$select_attr, input$selected_tfilter, sep = '<br>')
-        
+
       } else {
-        
+
         paste(input$select_attr, input$selected_bgfilter, sep = '<br>')
-        
+
       }
-      
+
     }
-    
+
   })
-  
+
   # Scatterplot
-  
+
   output$plot1 <- renderPlotly({
-    
-    if(values$geo_level == 'county')req(!is.null(input$selected_cfilter))
-    if(values$geo_level == 'tract')req(!is.null(input$selected_tfilter))
-    if(values$geo_level == 'block group')req(!is.null(input$selected_bgfilter))
-    
+
+    if(values$geo_level == 'county'){req(!is.null(input$selected_cfilter))}
+    if(values$geo_level == 'tract'){req(!is.null(input$selected_tfilter))}
+    if(values$geo_level == 'block group'){req(!is.null(input$selected_bgfilter))}
+    else{req(input$select_attr)}
+
     y <- list(
       title = "Count")
-    
+
     plot_data() %>%
       plot_ly(
         x = ~ Vintage,
@@ -918,21 +830,21 @@ server <-  function(input, output, session){
         mode = 'lines+markers'
       ) %>%
       layout(title=plot_title(),yaxis = y)
-      
+
   })
-  
-  # Histogram Plot 
-  
-  output$plot_histo <- renderPlotly({
-    
-    plot_data()%>%
-      plot_ly(x = ~ get(input$select_attr), type = "histogram")
-  })
+
+  # Histogram Plot
+
+  # output$plot_histo <- renderPlotly({
+  #
+  #   plot_data()%>%
+  #     plot_ly(x = ~ get(input$select_attr), type = "histogram")
+  # })
 
 # Test / Trouble shooting
 # output$test <- renderPrint({
 # 
-#   zoom_level()
+#   filtered_data()
 # 
 # })
 
