@@ -86,6 +86,7 @@ ui <- fluidPage(
   fluidRow(
 
     column(3,
+           uiOutput("plot_type"),
            uiOutput("plot_filter_county"),
            uiOutput("plot_filter_tract"),
            uiOutput("plot_filter_bg")
@@ -95,6 +96,7 @@ ui <- fluidPage(
     column(8, offset = 1,
            h4(),
            plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5))
+           # plotlyOutput("bar_plot") %>% withSpinner(type = getOption("spinner.type", default = 5))
            # plotlyOutput("plot_histo")
     )
   ),
@@ -638,6 +640,20 @@ server <-  function(input, output, session){
 
 
   # Plot Controls ----
+  
+  # Select Plot type
+  output$plot_type <- renderUI({
+    
+    req(input$select_attr)
+    
+    selectInput(
+      "selected_plot",
+      label = h3("Plot Type"),
+      c("Scatter Plot","Horizontal Bar Plot")
+    )
+    
+  })
+  
 
   # Collect County, Tract, and Block Group names for plot filtering
 
@@ -691,7 +707,7 @@ server <-  function(input, output, session){
   # Reactively render selectInput boxes based on selected geo level
   output$plot_filter_county <- renderUI({
 
-    req(input$select_attr)
+    req(input$selected_plot)
 
     if(values$geo_level=='county'){
       selectInput(
@@ -748,9 +764,7 @@ server <-  function(input, output, session){
 
   })
 
-  # Plots -----
-
-  # Plot Title
+  # Plot Title -----
 
   plot_title <- reactive({
 
@@ -817,14 +831,16 @@ server <-  function(input, output, session){
 
   })
 
-  # Scatterplot
+  # Plots -----
 
   output$plot1 <- renderPlotly({
-
+    
     if(values$geo_level == 'county'){req(!is.null(input$selected_cfilter))}
     if(values$geo_level == 'tract'){req(!is.null(input$selected_tfilter))}
     if(values$geo_level == 'block group'){req(!is.null(input$selected_bgfilter))}
     else{req(input$select_attr)}
+    
+    if(input$selected_plot == 'Scatter Plot'){
 
     y <- list(
       title = "Count")
@@ -840,9 +856,54 @@ server <-  function(input, output, session){
         mode = 'lines+markers'
       ) %>%
       layout(title=plot_title(),yaxis = y)
+    
+    } else {
+      
+        y_axis <- list(
+          title = "")
+
+        x_axis <- list(
+          title = "Count")
+
+        plot_data() %>%
+          filter(Vintage == input$yr) %>%
+          select(NAME) -> bar_names
+
+        if(values$geo_level == 'county'){sub(" .*", '', bar_names$NAME) -> bar_names}
+
+        else if (values$geo_level == 'tract'){gsub(",.*$", "", bar_names$NAME) %>% word(2,3) -> bar_names}
+
+        else if (values$geo_level == 'block group'){word(bar_names$NAME,1,2,sep=',') -> bar_names}
+
+        plot_data() %>%
+          filter(Vintage == input$yr) %>%
+          plot_ly(
+            x = ~ get(input$select_attr),
+            y = bar_names,
+            type = 'bar',
+            orientation = 'h',
+            marker = list(
+              # color = 'rgba(50, 171, 96, 0.6)',
+              color = 'rgb(154, 208, 245, 0.6)',
+              line = list(color = 'rgba(50, 171, 96, 1.0)', width = 1)
+            )
+          ) %>%
+          layout(
+            title = plot_title(),
+            xaxis = x_axis,
+            yaxis = y_axis,
+            margin = list(
+              l = 100,
+              r = 20,
+              t = 70,
+              b = 70
+            )
+          )
+      
+    }
 
   })
-
+  
   # Histogram Plot
 
   # output$plot_histo <- renderPlotly({

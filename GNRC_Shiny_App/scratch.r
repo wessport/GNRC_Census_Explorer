@@ -6,6 +6,7 @@ library(leaflet)
 library(rgdal)
 library(magrittr)
 library(sf)
+library(stringr)
 library(tigris)
 library(tidyverse)
 library(lettercase)
@@ -347,9 +348,10 @@ saveRDS(places,"./data/places.rds")
 ####
 
 contract_rent_dt %>% filter(Level == 'county') -> test
+contract_rent_dt %>% filter(Level == 'tract' & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) -> test
+contract_rent_dt %>% filter(Level == 'block group' & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) -> test
 
-
-# Histogram Plot
+# Bar Plot
 
 y <-  2016
 
@@ -361,11 +363,22 @@ x_axis <- list(
 
 grep(" .*", test$NAME, value = TRUE)
 
+gsub("^(.*?),.*", "\\1", test$NAME)
+
+
+
+
 test %>%
   filter(Vintage == 2016) %>%
   select(NAME) -> bar_names
-  
 
+# BG
+word(bar_names$NAME,1,2,sep=',') -> bar_names
+
+# Tract
+gsub(",.*$", "", bar_names$NAME) %>% word(2,3) -> bar_names  
+
+# County
 sub(" .*", '', bar_names$NAME) -> bar_names
 
 test %>%
