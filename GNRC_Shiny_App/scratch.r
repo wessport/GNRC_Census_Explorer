@@ -1,5 +1,6 @@
 # A sandbox for working with census data
 library(dplyr)
+library(ggplot2)
 library(tidycensus)
 library(leaflet)
 library(rgdal)
@@ -345,4 +346,52 @@ saveRDS(places,"./data/places.rds")
 
 ####
 
-contract_rent_dt %>% filter(Level == 'block group' & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) -> test
+contract_rent_dt %>% filter(Level == 'county') -> test
+
+
+# Histogram Plot
+
+y <-  2016
+
+y_axis <- list(
+  title = "")
+
+x_axis <- list(
+  title = "Count")
+
+grep(" .*", test$NAME, value = TRUE)
+
+test %>%
+  filter(Vintage == 2016) %>%
+  select(NAME) -> bar_names
+  
+
+sub(" .*", '', bar_names$NAME) -> bar_names
+
+test %>%
+  filter(Vintage == y) %>%
+  plot_ly(
+    x = ~ get('Total estimate'),
+    y = bar_names,
+    type = 'bar',
+    orientation = 'h',
+    marker = list(
+      # color = 'rgba(50, 171, 96, 0.6)',
+      color = 'rgb(154, 208, 245, 0.6)',
+      line = list(color = 'rgba(50, 171, 96, 1.0)', width = 1)
+    )
+  ) %>%
+  layout(
+    title = 'Horizontal bar Chart',
+    xaxis = x_axis,
+    yaxis = y_axis,
+    margin = list(
+      l = 100,
+      r = 20,
+      t = 70,
+      b = 70
+    )
+  )
+
+
+

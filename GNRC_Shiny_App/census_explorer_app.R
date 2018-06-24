@@ -305,28 +305,35 @@ server <-  function(input, output, session){
   # Map - Zoom Level ------
   values <- reactiveValues(zoom_level = 8,geo_level = 'county')
   
-  observeEvent(input$mymap_zoom,{
+  observeEvent(c(input$mymap_zoom,input$select_geo),{
+  
     z_level <- input$mymap_zoom
     
     if(is.null(input$select_geo)){
     
       if(z_level <= 9 & values$geo_level != 'county') {values$geo_level <- 'county'} 
+      
       else if(z_level > 9 & z_level < 13 & values$geo_level != 'tract')  {values$geo_level <- 'tract'}
+      
       else if(z_level >= 13 & values$geo_level != 'block group') {values$geo_level <- 'block group'}
     }
+    
     else if(input$select_geo == "" | input$select_geo == "Automatic by Zoom Level"){
+      
       if(z_level <= 9 & values$geo_level != 'county') {values$geo_level <- 'county'} 
+      
       else if(z_level > 9 & z_level < 13 & values$geo_level != 'tract')  {values$geo_level <- 'tract'}
+      
       else if(z_level >= 13 & values$geo_level != 'block group') {values$geo_level <- 'block group'}
-    }
+    } 
+    
     else if(input$select_geo == "County"){values$geo_level <- 'county'}
-
+    
     else if(input$select_geo == "Tract"){values$geo_level <- 'tract'}
-
+    
     else if(input$select_geo == "Block Group"){values$geo_level <- 'block group'}
   })
   
-
   # Map - Filter Data -----
 
   filtered_data <- reactive({
@@ -355,7 +362,7 @@ server <-  function(input, output, session){
   # Map - Render Leaflet Tiles -----
   
   output$mymap <- renderLeaflet({
-
+    
     leaflet() %>%
       addTiles(group = "OSM") %>%
       addProviderTiles(providers$CartoDB.PositronNoLabels, options = providerTileOptions(noWrap = TRUE, zIndex = 1), group = 'Carto DB') %>%
@@ -371,7 +378,8 @@ server <-  function(input, output, session){
         "CartoDB.PositronOnlyLabels",
         group = "Carto DB",
         options = providerTileOptions(zIndex = 3, pane = 'markerPane')
-      )
+      ) %>%
+      hideGroup('Places')
   })
   
   # Map - Fill Color -----
@@ -433,6 +441,8 @@ server <-  function(input, output, session){
   
   places_label_txt <- reactive({
     
+    req(fc())
+    
     places %>%
       st_set_geometry(NULL) %>%
       pull("NAME") -> plabels
@@ -443,7 +453,7 @@ server <-  function(input, output, session){
   
   observe({
 
-    # req(input$mymap_zoom,fc())
+    # req(fc())
 
     leafletProxy("mymap", data = filtered_data()) %>%
       clearShapes() %>%
@@ -482,8 +492,8 @@ server <-  function(input, output, session){
         opacity = 0.5,
         label = lapply(places_label_txt(),HTML),
         group = 'Places'
-      ) %>%
-      hideGroup('Places')
+      ) 
+
     
   })
   
