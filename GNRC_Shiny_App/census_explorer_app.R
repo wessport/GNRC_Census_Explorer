@@ -22,6 +22,7 @@ library(magrittr)
 library(plotly)
 library(rgdal)
 library(shiny)
+library(shinycssloaders)
 library(sf)
 library(tidyverse)
 library(viridis)
@@ -52,7 +53,7 @@ ui <- fluidPage(
       
       selectInput(
         "select_category",
-        label = h3("Category:"),
+        label = h3("Topic:"),
         c("Please select an option below" = "",
           "Population" = "Pop",
           "Transportation" = "Tran",
@@ -74,7 +75,7 @@ ui <- fluidPage(
       ),
     
     mainPanel(
-      leafletOutput("mymap", height = 675)
+      leafletOutput("mymap", height = 675) %>% withSpinner(type = getOption("spinner.type", default = 5))
 
     )
   ),
@@ -85,17 +86,17 @@ ui <- fluidPage(
   fluidRow(
     
     column(3,
-           uiOutput("plot_filter")
+           uiOutput("plot_filter_county"),
+           uiOutput("plot_filter_tract"),
+           uiOutput("plot_filter_bg")
            
     ),
     
     column(8, offset = 1,
            h4(),
-           # plotlyOutput("plot1")
-           plotlyOutput("plot_histo")
-    ),
-    
-    plotOutput("myplot")
+           plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5))
+           # plotlyOutput("plot_histo")
+    )
   ),
   
   hr(),
@@ -124,7 +125,7 @@ server <-  function(input, output, session){
     else if (input$select_category == 'Pop') {
       selectInput(
         "select_var",
-        label = h3("Variable:"),
+        label = h3("Category:"),
         c(
           "Please select an option below" = "",
           'Detailed Race',
@@ -143,7 +144,7 @@ server <-  function(input, output, session){
     else if (input$select_category == 'Tran') {
       selectInput(
         "select_var",
-        label = h3("Variable:"),
+        label = h3("Category:"),
         c(
           "Please select an option below" = "",
           'Means of transportation to work',
@@ -172,7 +173,7 @@ server <-  function(input, output, session){
     else if (input$select_category == 'Housing') {
       selectInput(
         "select_var",
-        label = h3("Variable:"),
+        label = h3("Category:"),
         c(
           "Please select an option below" = "",
           'Contract Rent',
@@ -206,7 +207,7 @@ server <-  function(input, output, session){
     else if (input$select_category == 'Health') {
       selectInput(
         "select_var",
-        label = h3("Variable:"),
+        label = h3("Category:"),
         c("Please select an option below" = "", 'Sex by age by disability status')
       )
     }
@@ -214,7 +215,7 @@ server <-  function(input, output, session){
     else if (input$select_category == 'Emp') {
       selectInput(
         "select_var",
-        label = h3("Variable:"),
+        label = h3("Category:"),
         c(
           "Please select an option below" = "",
           'Employment status for the population 16 years and over',
@@ -263,7 +264,7 @@ server <-  function(input, output, session){
       
       selectInput(
         "select_attr",
-        label = h3("Map Attribute:"),
+        label = h3("Variable:"),
         c("Please select an option below" = "", attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")])
       )
     }
@@ -284,7 +285,7 @@ server <-  function(input, output, session){
 
     req(input$select_attr)
 
-    sliderInput("yr", "Map Vintage:", min = 2011, max = 2016, value = 2016, sep = '', animate =
+    sliderInput("yr", "Data Vintage:", min = 2011, max = 2016, value = 2016, sep = '', animate =
                     animationOptions(interval = 1200, loop = TRUE))
     })
 
@@ -635,38 +636,273 @@ server <-  function(input, output, session){
   })
 
 
-  # Plot1 -----
+  # Filter Plot Data -----
+  # based on user input 
   
   plot_data <- reactive({
     
-    req(plot_divisions())
+    req(county_names())
     
-    if(input$selected_pfilter ==''){
+    # User selects County
     
-    table_data() %>%
-      filter(Level == values$geo_level) %>%
-      group_by(NAME)
+    if(values$geo_level == 'county'){
       
-    } else if(input$selected_pfilter =='All'){
-      
-    table_data() %>%
-      filter(Level == values$geo_level) %>%
-      group_by(NAME)
-  
-    } else {
+      if(input$selected_cfilter ==''){
       
       table_data() %>%
-        filter(Level == values$geo_level & NAME == input$selected_pfilter) %>%
+        filter(Level == values$geo_level) %>%
         group_by(NAME)
+        
+      } else if(input$selected_cfilter =='All'){
+        
+      table_data() %>%
+        filter(Level == values$geo_level) %>%
+        group_by(NAME)
+    
+      } else {
+        
+        table_data() %>%
+          filter(Level == values$geo_level & NAME == input$selected_cfilter) %>%
+          group_by(NAME)
+        
+      }
+      
+    # User selects Tract 
+      
+    } else if (values$geo_level == 'tract'){
+      
+        if(input$selected_cfilter ==''){
+          table_data() %>%
+            filter(Level == values$geo_level & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) %>%
+            group_by(NAME)
+    
+        } else if(input$selected_cfilter !='' & (input$selected_tfilter == ''|input$selected_tfilter == 'All')){
+          
+          table_data() %>%
+            filter(Level == values$geo_level & grepl(input$selected_cfilter,NAME, fixed = TRUE)) %>%
+            group_by(NAME)
+       
+       } else{
+          
+          table_data() %>%
+            filter(Level == values$geo_level & grepl(input$selected_tfilter,NAME, fixed = TRUE)) %>%
+            group_by(NAME)
+        }
+      
+        
+    } else if(values$geo_level == 'block group'){
+      
+      if(input$selected_cfilter =='' & input$selected_tfilter =='' & input$selected_bgfilter ==''){
+        table_data() %>%
+          filter(Level == values$geo_level & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) %>%
+          group_by(NAME)
+        
+      } else if (input$selected_cfilter !='' & (input$selected_tfilter =='' | input$selected_tfilter =='All') & (input$selected_bgfilter == ''|input$selected_bgfilter == 'All')){
+        
+        table_data() %>%
+          filter(Level == values$geo_level & grepl(input$selected_cfilter,NAME, fixed = TRUE)) %>%
+          group_by(NAME)
+      
+      } else if(input$selected_cfilter !='' & input$selected_tfilter !='' & (input$selected_bgfilter == ''|input$selected_bgfilter == 'All')){
+        
+        table_data() %>%
+          filter(Level == values$geo_level & grepl(input$selected_tfilter,NAME, fixed = TRUE)) %>%
+          group_by(NAME)
+        
+      } else{
+        
+        table_data() %>%
+          filter(Level == values$geo_level & grepl(input$selected_bgfilter,NAME, fixed = TRUE)) %>%
+          group_by(NAME)
+      }
       
     }
     
 
   })
-
-  output$plot1 <- renderPlotly({
-
+  
+  
+  
+  # Plot Controls ----
+  
+  # Collect County, Tract, and Block Group names for plot filtering 
+  
+  county_names <- reactive({
     req(input$select_attr)
+    
+    table_data() %>%
+      filter(Level == 'county') %>%
+      select(NAME) %>%
+      distinct()
+    
+  })
+  
+  tract_names <- reactive({
+    
+    if(input$selected_cfilter == ""){
+      table_data() %>%
+        filter(Level == 'tract' & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) %>%
+        select(NAME) %>%
+        distinct()
+    } else if(input$selected_cfilter == "All"){
+    table_data() %>%
+      filter(Level == 'tract') %>%
+      select(NAME) %>%
+      distinct()
+    } else {
+      table_data() %>%
+        filter(Level == 'tract' & grepl(input$selected_cfilter,NAME, fixed = TRUE)) %>%
+        select(NAME) %>%
+        distinct()
+      
+    }
+  })
+  
+  blockgroup_names <- reactive({
+    
+    if(input$selected_cfilter == "" & (input$selected_tfilter == "" |input$selected_tfilter == "All")){
+      table_data() %>%
+        filter(Level == 'block group'& grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) %>%
+        select(NAME) %>%
+        distinct()
+    } else {
+      table_data() %>%
+        filter(Level == 'block group' & grepl(input$selected_tfilter,NAME, fixed = TRUE)) %>%
+        select(NAME) %>%
+        distinct()
+      
+    }
+  })
+  
+  # Reactively render selectInput boxes based on selected geo level
+  output$plot_filter_county <- renderUI({ 
+    req(input$select_attr)
+    
+    if(values$geo_level=='county'){
+      selectInput(
+        "selected_cfilter",
+        label = h3("Filter Data Points by County:"),
+        c("Please select an option below" = "", "All",county_names())
+      )
+    } else if(values$geo_level == 'tract' | values$geo_level == 'block group'){
+      selectInput(
+        "selected_cfilter",
+        label = h3("Filter Data Points by County:"),
+        c("Davidson County, Tennessee" = "", county_names())
+      )
+    } 
+    
+  })
+    
+  output$plot_filter_tract <- renderUI({ 
+    
+    if(values$geo_level == 'tract'){  
+      selectInput(
+        "selected_tfilter",
+        label = h3("Filter Data Points by Tract:"),
+        c("Please select an option below" = "", "All",tract_names())
+      )
+    } else if (values$geo_level == 'block group'){
+      
+      selectInput(
+        "selected_tfilter",
+        label = h3("Filter Data Points by Tract:"),
+        c("Please select an option below" = "", "All",tract_names())
+      )
+      
+    }
+    
+  })
+  
+  output$plot_filter_bg <- renderUI({ 
+    
+    if(values$geo_level == 'block group'){
+      
+      req(!is.null(input$selected_tfilter))
+      
+      selectInput(
+        "selected_bgfilter",
+        label = h3("Filter Data Points by Block Group:"),
+        c("Please select an option below" = "", "All",blockgroup_names())
+      )
+    }
+    
+  })
+  
+  # Plots -----
+  
+  # Plot Title
+  
+  plot_title <- reactive({
+    
+    if(values$geo_level == 'county'){
+      if(input$selected_cfilter == '' | input$selected_cfilter == 'All'){
+      
+        input$select_attr
+      
+      } else { paste(input$select_attr,input$selected_cfilter, sep = '<br>')}
+      
+    } else if(values$geo_level == 'tract'){
+      
+      if(input$selected_cfilter == '' & (input$selected_tfilter == '' |input$selected_tfilter == 'All')){
+        
+          paste(input$select_attr, 'Davidson County, Tennessee', sep = '<br>')
+        
+      } else if (input$selected_cfilter != '' & (input$selected_tfilter == '' | input$selected_tfilter == 'All')){ 
+        
+        paste(input$select_attr, input$selected_cfilter, sep = '<br>')
+        
+      } else if (input$selected_cfilter == '' & input$selected_tfilter != ''){
+        
+          paste(input$select_attr, input$selected_tfilter, sep = '<br>')
+      } else {
+        
+        paste(input$select_attr, input$selected_tfilter, sep = '<br>')
+      }
+      
+    } else if (values$geo_level == 'block group'){
+      
+      if(input$selected_cfilter == '' &
+         (input$selected_tfilter == '' | input$selected_tfilter == 'All') &
+         (input$selected_bgfilter == '' | input$selected_bgfilter == 'All')) {
+
+          paste(input$select_attr, 'Davidson County, Tennessee', sep = '<br>')
+
+      } else if (input$selected_cfilter != '' & 
+                 (input$selected_tfilter == '' | input$selected_tfilter == 'All') & 
+                 (input$selected_bgfilter == '' | input$selected_bgfilter == 'All')){
+        
+        paste(input$select_attr, input$selected_cfilter, sep = '<br>')
+      
+      } else if (input$selected_cfilter == '' & input$selected_tfilter != '' & input$selected_bgfilter == ''){
+        
+        paste(input$select_attr, input$selected_tfilter, sep = '<br>')
+        
+      } else if (input$selected_cfilter == '' & input$selected_tfilter == '' & input$selected_bgfilter != ''){
+        
+        paste(input$select_attr, input$selected_bgfilter, sep = '<br>')
+          
+      } else if (input$selected_cfilter != '' & input$selected_tfilter != '' & (input$selected_bgfilter == '' | input$selected_bgfilter == 'All')){
+        
+        paste(input$select_attr, input$selected_tfilter, sep = '<br>')
+        
+      } else {
+        
+        paste(input$select_attr, input$selected_bgfilter, sep = '<br>')
+        
+      }
+      
+    }
+    
+  })
+  
+  # Scatterplot
+  
+  output$plot1 <- renderPlotly({
+    
+    if(values$geo_level == 'county')req(!is.null(input$selected_cfilter))
+    if(values$geo_level == 'tract')req(!is.null(input$selected_tfilter))
+    if(values$geo_level == 'block group')req(!is.null(input$selected_bgfilter))
     
     y <- list(
       title = "Count")
@@ -681,34 +917,16 @@ server <-  function(input, output, session){
         type = 'scatter',
         mode = 'lines+markers'
       ) %>%
-      layout(title=input$select_attr,yaxis = y)
+      layout(title=plot_title(),yaxis = y)
+      
   })
+  
+  # Histogram Plot 
   
   output$plot_histo <- renderPlotly({
     
     plot_data()%>%
       plot_ly(x = ~ get(input$select_attr), type = "histogram")
-  })
-  
-  plot_divisions <- reactive({
-    req(input$select_attr)
-    
-    table_data() %>%
-      filter(Level == values$geo_level) %>%
-      select(NAME) %>%
-      distinct()
-
-  })
-  
-  output$plot_filter <- renderUI({ 
-    req(input$select_attr)
-    
-    selectInput(
-      "selected_pfilter",
-      label = h3("Filter Data Points by Division:"),
-      c("Please select an option below" = "", "All",plot_divisions())
-    )
-    
   })
 
 # Test / Trouble shooting

@@ -342,3 +342,7 @@ places <- st_read("C:/Users/wPorter/Data/Census/census_shapefiles/boundaries/GNR
 places %>% select(NAME) -> places
 
 saveRDS(places,"./data/places.rds")
+
+####
+
+contract_rent_dt %>% filter(Level == 'block group' & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) -> test
