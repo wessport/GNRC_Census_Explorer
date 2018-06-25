@@ -105,9 +105,9 @@ ui <- fluidPage(
 
   uiOutput("dt"),
 
-  uiOutput("download_dt")
+  uiOutput("download_dt"),
   
-  # textOutput("test")
+  textOutput("test")
 
 )
 
@@ -410,6 +410,7 @@ server <-  function(input, output, session){
 
   })
   
+  
   # Map - Labels -----
   label_txt <- reactive({
 
@@ -471,7 +472,6 @@ server <-  function(input, output, session){
         label = lapply(label_txt(), HTML),
         group = 'Boundary'
       ) %>%
-      
       addLayersControl(
         baseGroups = c('Carto DB', 'OSM','Esri World Imagery'),
         overlayGroups = c('Places','Boundary'),
@@ -495,8 +495,55 @@ server <-  function(input, output, session){
         label = lapply(places_label_txt(),HTML),
         group = 'Places'
       ) 
+  })
+  
+  # Map Legend -----
 
+  pal <- reactive({
     
+    q_length <- length(quantile(filtered_data()[[input$select_attr]]))
+    
+    unique_q_length <- length(unique(quantile(filtered_data()[[input$select_attr]])))
+    
+    if(q_length>unique_q_length){
+      
+      colorBin("YlOrRd", filtered_data()[[input$select_attr]])
+      
+    } else{
+      
+      colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])
+    }
+    
+  })
+  
+  observe({
+
+    if(is.null(input$select_attr)){
+
+      leafletProxy("mymap") %>%
+        clearControls()
+
+    } else if (input$select_attr ==''){
+
+      leafletProxy("mymap") %>%
+        clearControls()
+
+    } else {
+    
+      req(fc())
+      
+      leafletProxy("mymap", data = filtered_data()) %>%
+        clearControls() %>%
+        addLegend("bottomright",
+                  pal = pal(),
+                  values = ~get(input$select_attr),
+                  title = "Count",
+                  opacity = 0.5,
+                  labFormat = function(type, cuts, p) {
+                    n = length(cuts)
+                    paste0(cuts[-n], " - ", cuts[-1])}
+          )
+    }
   })
   
   # Data Table -----
@@ -913,11 +960,11 @@ server <-  function(input, output, session){
   # })
 
 # Test / Trouble shooting
-# output$test <- renderPrint({
-# 
-#   filtered_data()
-# 
-# })
+output$test <- renderPrint({
+
+  pal()
+
+})
 
 }
 

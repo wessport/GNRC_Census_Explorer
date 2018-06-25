@@ -288,8 +288,10 @@ f_cnty_data %>% ungroup() %>% summarise(sum(`Total estimate`)) %>% st_set_geomet
 f_cnty_data %>%
   mutate(perc=(get("With cash rent $2,000 to $2,499 estimate")/total[[1]])*100) -> f_cnty_data
 
-tryCatch(colorQuantile("YlOrRd", f_cnty_data[["perc"]])(f_cnty_data[["perc"]]), 
+pal <- tryCatch(colorQuantile("YlOrRd", f_cnty_data[["perc"]])(f_cnty_data[["perc"]]), 
          error=function(e) colorBin("YlOrRd", f_cnty_data[["perc"]])(f_cnty_data[["perc"]]))
+
+
 
 leaflet(f_cnty_data) %>%
   
@@ -297,7 +299,7 @@ leaflet(f_cnty_data) %>%
                    options = providerTileOptions(noWrap = TRUE, zIndex = 1)) %>%
   addPolygons(
     group = "county",
-    fillColor = ~ colorBin("YlOrRd", f_cnty_data[["perc"]])(f_cnty_data[["perc"]]),
+    fillColor = colorBin("YlOrRd", f_cnty_data[["perc"]])(f_cnty_data[["perc"]]),
     fillOpacity = 0.5,
     weight = 2,
     stroke = T,
@@ -313,6 +315,10 @@ leaflet(f_cnty_data) %>%
     group = "labels",
     options = providerTileOptions(zIndex = 3, pane = 'markerPane')
   ) %>%
+  addLegend("bottomright", pal = 'grey', values = ~perc,
+            title = "Count",
+            opacity = 0.5
+  )%>%
   addLayersControl(overlayGroups = c("polygons", "labels"))
 
 #####
@@ -406,5 +412,21 @@ test %>%
     )
   )
 
+#### Fighting with bicycle legend
 
+`Means of transportation to work`$`Bicycle estimate`
+
+quantile(`Means of transportation to work`$`Bicycle estimate`)
+
+unique(quantile(`Means of transportation to work`$`Bicycle estimate`))
+
+q_length <- length(quantile(`Means of transportation to work`$`Bicycle estimate`))
+
+unique_q_length <- length(unique(quantile(`Means of transportation to work`$`Bicycle estimate`)))
+
+if(q_length>unique_q_length){
+  print('Need to use colorBin')
+} else{
+  'Need to use colorQuant'
+}
 
