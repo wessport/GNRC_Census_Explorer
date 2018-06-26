@@ -458,4 +458,25 @@ colnames(`Detailed Race`)[(str_count(colnames(`Detailed Race`), ' ')>=10)]
 which(str_count(colnames(`Detailed Race`), ' ')>=10)
 
 
-#
+# Move Vintage and Level to front of table
+
+move_vl <- function(data_path){
+  
+  data_set <- readRDS(data_path)
+  
+  data_set %>%
+    ungroup %>%
+    select(GEOID,NAME,Level,Vintage)-> a
+  
+  data_set %>%
+    ungroup%>%
+    select(-GEOID,-NAME,-Level,-Vintage) -> b
+  
+  bind_cols(a,b) -> c
+  
+  saveRDS(c,data_path)
+  
+}
+
+
+

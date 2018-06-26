@@ -125,12 +125,33 @@ return(requested_data)
 # end <- Sys.time()
 # end - start
 
+# Move Vintage and Level to front of table
+
+move_vl <- function(data_path){
+  
+  data_set <- readRDS(data_path)
+  
+  data_set %>%
+    ungroup %>%
+    select(GEOID,NAME,Level,Vintage)-> a
+  
+  data_set %>%
+    ungroup%>%
+    select(-GEOID,-NAME,-Level,-Vintage) -> b
+  
+  bind_cols(a,b) -> c
+  
+  saveRDS(c,data_path)
+  
+}
+
 # REQUEST AND WRITE DATA ----------------------------------------------------
 
 # Define variable TableIDs
 tableID <- "B25056"
 contract_rent_dt <- request_data(tableID)
 saveRDS(contract_rent_dt,"./data/Contract Rent.rds")
+move_vl("./data/Contract Rent.rds")
 
 tableID <- "C02003"
 detailed_race_dt <- request_data(tableID)
