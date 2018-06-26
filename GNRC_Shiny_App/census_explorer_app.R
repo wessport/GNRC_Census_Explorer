@@ -105,9 +105,9 @@ ui <- fluidPage(
 
   uiOutput("dt"),
 
-  uiOutput("download_dt"),
+  uiOutput("download_dt")
   
-  textOutput("test")
+  # textOutput("test")
 
 )
 
@@ -402,11 +402,15 @@ server <-  function(input, output, session){
 
       'grey'
 
-    } else if (sum(is.na(filtered_data()[[input$select_attr]]))>0){
-
-      'grey'
-
-    } else {
+    } 
+    
+    # else if (sum(is.na(filtered_data()[[input$select_attr]]))>0){
+    # 
+    #   'grey'
+    # 
+    # } 
+    
+    else {
 
       tryCatch(colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]),
                error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
@@ -560,11 +564,70 @@ server <-  function(input, output, session){
     
   })
   
-  output$data_table = renderDT(
-    table_data(),
-    extensions = 'FixedHeader',
-    options = list(scrollX = TRUE, fixedHeader = TRUE)
-  )
+  # output$data_table = renderDT(
+  #   table_data(),
+  #   extensions = 'FixedHeader',
+  #   options = list(scrollX = TRUE, fixedHeader = TRUE)
+  # )
+  
+  output$data_table <- DT::renderDataTable({
+    
+    DT::datatable(
+      table_data(),
+      extensions = 'FixedHeader',
+      options = list(
+        scrollX = TRUE,
+        fixedHeader = TRUE,
+        pageLength = 5
+      )
+    )
+  })
+  
+  output$dt_county <- DT::renderDataTable({
+    
+    table_data() %>%
+      filter(Level == 'county') %>%
+      DT::datatable(
+        extensions = 'FixedHeader',
+        options = list(
+          scrollX = TRUE,
+          fixedHeader = TRUE,
+          pageLength = 5
+        )
+      )
+  })
+  
+  output$dt_tract <- DT::renderDataTable({
+    
+    table_data() %>%
+      filter(Level == 'tract') %>%
+      DT::datatable(
+        extensions = 'FixedHeader',
+        options = list(
+          scrollX = TRUE,
+          fixedHeader = TRUE,
+          pageLength = 5
+        )
+      )
+  })
+  
+  output$dt_bg <- DT::renderDataTable({
+    
+    table_data() %>%
+      filter(Level == 'block group') %>%
+      DT::datatable(
+        extensions = 'FixedHeader',
+        options = list(
+          autoWidth = TRUE,
+          columnDefs = list(list(width = '300px', targets = c(2,which(str_count(colnames(table_data()), ' ')>6)))),
+          scrollX = TRUE,
+          fixedHeader = FALSE,
+          pageLength = 5
+        )
+      )
+  })
+  
+  
   
   output$dt <- renderUI({
 
@@ -576,11 +639,21 @@ server <-  function(input, output, session){
 
     else {
 
-      fluidRow(column(12), DTOutput("data_table"))
+      fluidRow(column(12), 
+               # DTOutput("data_table")
+               tabsetPanel(
+                 id = 'dataset',
+                 tabPanel("County", DT::dataTableOutput("dt_county")),
+                 tabPanel("Tract", DT::dataTableOutput("dt_tract")),
+                 tabPanel("Block Group", DT::dataTableOutput("dt_bg"))
+               )
+               )
 
     }
 
   })
+  
+  # Download data table 
 
   output$downloadData <- downloadHandler(
     filename = function() {
@@ -964,11 +1037,11 @@ server <-  function(input, output, session){
   # })
 
 # Test / Trouble shooting
-output$test <- renderPrint({
-
-  pal()
-
-})
+# output$test <- renderPrint({
+# 
+#   pal()
+# 
+# })
 
 }
 

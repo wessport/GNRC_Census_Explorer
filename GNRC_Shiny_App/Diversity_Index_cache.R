@@ -374,3 +374,63 @@ county_di %>%
 di <- st_transform(di, 4326, use_gdal = T)
 
 save(di, file = "data/di.RData")
+
+
+di <- readRDS("data/Diversity Indices.rds")
+
+gross_rent <- readRDS("data/Gross Rent.rds")
+
+di %>%
+  filter(Level == 'county', Vintage == 2016)-> c_16
+di %>%
+  filter(Level == 'county', Vintage == 2015)-> c_15
+di %>%
+  filter(Level == 'county', Vintage == 2014)-> c_14
+di %>%
+  filter(Level == 'county', Vintage == 2013)-> c_13
+di %>%
+  filter(Level == 'county', Vintage == 2012)-> c_12
+di %>%
+  filter(Level == 'county', Vintage == 2011)-> c_11
+
+di %>%
+  filter(Level == 'tract', Vintage == 2016)-> t_16
+di %>%
+  filter(Level == 'tract', Vintage == 2015)-> t_15
+di %>%
+  filter(Level == 'tract', Vintage == 2014)-> t_14
+di %>%
+  filter(Level == 'tract', Vintage == 2013)-> t_13
+di %>%
+  filter(Level == 'tract', Vintage == 2012)-> t_12
+di %>%
+  filter(Level == 'tract', Vintage == 2011)-> t_11
+
+di %>%
+  filter(Level == 'block group', Vintage == 2016)-> b_16
+di %>%
+  filter(Level == 'block group', Vintage == 2015)-> b_15
+di %>%
+  filter(Level == 'block group', Vintage == 2014)-> b_14
+di %>%
+  filter(Level == 'block group', Vintage == 2013)-> b_13
+di %>%
+  filter(Level == 'block group', Vintage == 2012)-> b_12
+di %>%
+  filter(Level == 'block group', Vintage == 2011)-> b_11
+
+test <- rbind(c_16,t_16,b_16,c_15,t_15,b_15,c_14,t_14,b_14,c_13,t_13,b_13,c_12,t_12,b_12,c_11,t_11,b_11)
+
+gross_rent %>%
+  ungroup() %>%
+  select(GEOID) %>%
+  mutate(
+    NAME = test$NAME,
+    Shellys_DI = round(test$Shellys_DI,3),
+    Simpsons_DI = round(test$Simpsons_DI,3),
+    Shannons_DI = round(test$Shannons_DI,3),
+    Vintage = test$Vintage,
+    Level = test$Level
+  ) -> diversity_indices
+
+saveRDS(diversity_indices,"./data/Diversity Indices.rds")

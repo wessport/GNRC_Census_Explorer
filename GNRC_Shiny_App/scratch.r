@@ -437,3 +437,25 @@ health_insr_cov_dt %>%
 
 quantile(test$`Female estimate`,na.rm=TRUE)
 
+#### DCS
+
+tableID <- "B25056"
+year <- 2010
+state <- 'TN'
+counties <- c('Cheatham','Davidson','Dickson','Houston','Humphreys','Montgomery','Maury','Robertson','Rutherford','Stewart','Sumner',
+              'Trousdale','Williamson','Wilson')
+
+# Doesn't work because  decennial table IDs are different from ACS
+census_data <- get_decennial('county', table = tableID, year = year, state = state, county = counties, 
+                       geometry = FALSE)
+
+# Data Table Headers -----
+
+colnames(`Detailed Race`)
+
+colnames(`Detailed Race`)[(str_count(colnames(`Detailed Race`), ' ')>=10)]
+
+which(str_count(colnames(`Detailed Race`), ' ')>=10)
+
+
+#
