@@ -156,7 +156,7 @@ server <-  function(input, output, session){
           'Means of transportation to work black or african american alone',
           'Means of transportation to work hispanic or latino',
           'Means of transportation to work native hawaiian and other pacific islander alone',
-          #'Means of transportation to work white alone',
+          'Means of transportation to work white alone',
           'Means of transportation to work white alone not hispanic or latino',
           'Means of transportation to work some other race alone',
           'Means of transportation to work two or more races',
@@ -208,7 +208,10 @@ server <-  function(input, output, session){
       selectInput(
         "select_var",
         label = h3("Category:"),
-        c("Please select an option below" = "", 'Sex by age by disability status')
+        c("Please select an option below" = "", 
+          'Health insurance coverage status by sex by age',
+          'Medicare coverage by sex by age',
+          'Sex by age by disability status')
       )
     }
     
@@ -221,6 +224,7 @@ server <-  function(input, output, session){
           'Employment status for the population 16 years and over',
           'Mean usual hours worked in the past 12 months for workers 16 to 64 years',
           'Median age by sex for workers 16 to 64 years',
+          'Poverty status in the past 12 months by age',
           'Ratio of income to poverty level of families in the past 12 months',
           'Sex by age by employment status for the population 16 years and over',
           'Sex by class of worker for the civilian employed population 16 years and over'
@@ -500,22 +504,22 @@ server <-  function(input, output, session){
   # Map Legend -----
 
   pal <- reactive({
-    
-    q_length <- length(quantile(filtered_data()[[input$select_attr]]))
-    
-    unique_q_length <- length(unique(quantile(filtered_data()[[input$select_attr]])))
-    
+
+    q_length <- length(quantile(filtered_data()[[input$select_attr]],na.rm=TRUE))
+
+    unique_q_length <- length(unique(quantile(filtered_data()[[input$select_attr]],na.rm=TRUE)))
+
     if(q_length>unique_q_length){
-      
+
       colorBin("YlOrRd", filtered_data()[[input$select_attr]])
-      
+
     } else{
-      
+
       colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])
     }
-    
+
   })
-  
+
   observe({
 
     if(is.null(input$select_attr)){
@@ -529,9 +533,9 @@ server <-  function(input, output, session){
         clearControls()
 
     } else {
-    
+
       req(fc())
-      
+
       leafletProxy("mymap", data = filtered_data()) %>%
         clearControls() %>%
         addLegend("bottomright",

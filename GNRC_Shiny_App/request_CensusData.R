@@ -260,7 +260,7 @@ tableID <- "B08105G"
 means_trans_more_dt <- request_data(tableID)
 saveRDS(means_trans_more_dt,"./data/Means of transportation to work two or more races.rds")
 
-table_ID <- "B08105A"
+tableID <- "B08105A"
 means_trans_white_dt <- request_data(table_ID)
 saveRDS(means_trans_white_dt,"./data/Means of transportation to work white alone.rds")
 

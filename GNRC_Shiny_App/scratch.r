@@ -430,3 +430,10 @@ if(q_length>unique_q_length){
   'Need to use colorQuant'
 }
 
+
+health_insr_cov_dt %>%
+  filter(Level == 'block group' & Vintage == 2016) -> test 
+
+
+quantile(test$`Female estimate`,na.rm=TRUE)
+
