@@ -96,10 +96,11 @@ ui <- fluidPage(
     column(8, offset = 1,
            h4(),
            plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5))
-           # plotlyOutput("bar_plot") %>% withSpinner(type = getOption("spinner.type", default = 5))
-           # plotlyOutput("plot_histo")
+
     )
   ),
+  
+  # verbatimTextOutput("event"),
 
   hr(),
 
@@ -551,6 +552,9 @@ server <-  function(input, output, session){
     }
   })
   
+  # Map Markers -----
+  
+  
   # Data Table -----
   
   table_data <- reactive({
@@ -635,7 +639,7 @@ server <-  function(input, output, session){
     else {
 
       fluidRow(column(12), 
-               # DTOutput("data_table")
+
                tabsetPanel(
                  id = 'dataset',
                  tabPanel("County", DT::dataTableOutput("dt_county")),
@@ -756,9 +760,15 @@ server <-  function(input, output, session){
 
   })
 
+  # Plot Event Data -----
+  
+  # output$event <- renderPrint({
+  # 
+  #   event_data("plotly_click", source = "select")
+  # 
+  #   })
 
-
-  # Plot Controls ----
+  # Plot Controls -----
   
   # Select Plot type
   output$plot_type <- renderUI({
@@ -972,7 +982,8 @@ server <-  function(input, output, session){
         colors = viridis_pal(option = "D")(3),
         hovertext = ~ NAME,
         type = 'scatter',
-        mode = 'lines+markers'
+        mode = 'lines+markers',
+        source = "select"
       ) %>%
       layout(title=plot_title(),yaxis = y)
     
@@ -1022,19 +1033,11 @@ server <-  function(input, output, session){
     }
 
   })
-  
-  # Histogram Plot
-
-  # output$plot_histo <- renderPlotly({
-  #
-  #   plot_data()%>%
-  #     plot_ly(x = ~ get(input$select_attr), type = "histogram")
-  # })
 
 # Test / Trouble shooting
 # output$test <- renderPrint({
 # 
-#   pal()
+#   output$event
 # 
 # })
 
