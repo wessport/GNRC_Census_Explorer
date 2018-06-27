@@ -291,20 +291,17 @@ server <-  function(input, output, session){
   selected_data <-  reactive({
     
     req(input$select_var)
-    
-    # if(is.null(input$select_var)){readRDS("./data/default_data.rds")}
-    # 
-    # else if (input$select_var == ""){readRDS("./data/default_data.rds")}
-    # 
-    # else {
       
+      # Read in requested tabular census data
       tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
       
+      # Join tabular data with spatial geometry
       tabular_data %>% 
         left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
       
-      st_as_sf(t)
-    # }
+      # Define Coordinate Reference System: EPSG: 4326 
+      # Transfrom joined object into a simple feature spatial object
+      st_transform(st_as_sf(t), 4326, use_gdal = T)
     
   })
   
@@ -564,12 +561,6 @@ server <-  function(input, output, session){
     
   })
   
-  # output$data_table = renderDT(
-  #   table_data(),
-  #   extensions = 'FixedHeader',
-  #   options = list(scrollX = TRUE, fixedHeader = TRUE)
-  # )
-  
   output$data_table <- DT::renderDataTable({
     
     DT::datatable(
@@ -590,6 +581,8 @@ server <-  function(input, output, session){
       DT::datatable(
         extensions = 'FixedHeader',
         options = list(
+          autoWidth = TRUE,
+          columnDefs = list(list(width = '300px', targets = c(2,which(str_count(colnames(table_data()), ' ')>6)))),
           scrollX = TRUE,
           fixedHeader = TRUE,
           pageLength = 5
@@ -604,6 +597,8 @@ server <-  function(input, output, session){
       DT::datatable(
         extensions = 'FixedHeader',
         options = list(
+          autoWidth = TRUE,
+          columnDefs = list(list(width = '300px', targets = c(2,which(str_count(colnames(table_data()), ' ')>6)))),
           scrollX = TRUE,
           fixedHeader = TRUE,
           pageLength = 5
@@ -653,14 +648,14 @@ server <-  function(input, output, session){
 
   })
   
-  # Download data table 
+  # Download Data ----- 
 
   output$downloadData <- downloadHandler(
     filename = function() {
       paste(input$select_var, ".csv", sep = "")
     },
     content = function(file) {
-      write.csv((selected_data()%>%st_set_geometry(NULL)), file, row.names = FALSE)
+      write.csv((selected_data()%>% st_set_geometry(NULL)), file, row.names = FALSE)
     }
   )
 

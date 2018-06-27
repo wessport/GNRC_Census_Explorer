@@ -78,6 +78,11 @@ format_Census <- function(geography,tableID,year,state,counties){
     select(-table_name) %>%
     mutate(label = gsub(":!!"," ",label)) %>%
     mutate(label = gsub(":"," ",label)) %>%
+    mutate(label = ifelse(grepl(' --!!Total estimate',label)|grepl(' --!!Total moe',label),
+                          gsub(" --!!"," ",label),
+                          gsub(" --!!Total","",label))) %>%
+    mutate(label = gsub("Median age--!!","",label)) %>%
+    mutate(label = gsub("Median age","Total",label)) %>%
     mutate(label_mod = label) %>%
     mutate(name_mod = substr(name,1,nchar(as.character(name))-1)) %>%
     mutate(concept = str_extract(concept,"^*\\s([^ ]).*$")) -> a

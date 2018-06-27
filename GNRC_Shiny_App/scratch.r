@@ -466,11 +466,11 @@ move_vl <- function(data_path){
   
   data_set %>%
     ungroup %>%
-    select(GEOID,NAME,Level,Vintage)-> a
+    select(GEOID,NAME,Level,Vintage,`Total estimate`,`Total moe`)-> a
   
   data_set %>%
     ungroup%>%
-    select(-GEOID,-NAME,-Level,-Vintage) -> b
+    select(-GEOID,-NAME,-Level,-Vintage,-`Total estimate`,-`Total moe`) -> b
   
   bind_cols(a,b) -> c
   
@@ -478,5 +478,22 @@ move_vl <- function(data_path){
   
 }
 
+move_vl("./data/Gross Rent.rds")
+
+# # Convert GEOID to character
+# 
+# as.character(`Detailed Race`$GEOID)
+# `Detailed Race` %>% mutate_at("GEOID",as.character())
 
 
+colnames(median_age_trans_dt)
+
+grep(' --!!Total estimate',colnames(median_age_trans_dt),value = TRUE)
+
+grepl(' --!!Total estimate',colnames(median_age_trans_dt))
+
+labs <- as.data.frame(colnames(median_age_trans_dt))
+colnames(labs) <- 'label'
+
+labs %>%
+  mutate(label_mod = ifelse(grepl(' --!!Total estimate',label)|grepl(' --!!Total moe',label),gsub(" --!!"," ",label),gsub(" --!!Total","",label)))
