@@ -5,13 +5,13 @@
 #                       20 APR 2018                           #
 #                                                             #
 #          A Shiny web application for visualizing            #
-#              American Community Census data                 #
+#              American Community Survey data                 #
 #                                                             #
 # Find out more about building applications with Shiny here:  #
 #                                                             #
 #                http://shiny.rstudio.com/                    #
 #                                                             #
-#               Last Updated: 24-JUNE-2018                    #
+#               Last Updated: 28-JUNE-2018                    #
 #                                                             #
 ###############################################################
 
@@ -22,6 +22,7 @@ library(magrittr)
 library(plotly)
 library(rgdal)
 library(shiny)
+library(shinydashboard)
 library(shinycssloaders)
 library(sf)
 library(tidyverse)
@@ -37,79 +38,164 @@ load("./data/di.RData")
 places <- readRDS("./data/places.rds")
 geom <- readRDS("./data/geometry.rds")
 
+# Display tab content in dashboardBody()with menuItem
+convertMenuItem <- function(mi,tabName) {
+  mi$children[[1]]$attribs['data-toggle']="tab"
+  mi$children[[1]]$attribs['data-value'] = tabName
+  mi
+}
+
 # UI ----------------------------------------------------------------
 
-ui <- fluidPage(
-  titlePanel(h1("GNRC Census Explorer")), 
+ui <- dashboardPage(
   
-  sidebarLayout(
+  dashboardHeader(title = "GNRC Census Explorer",
+                  titleWidth = 350),
+  
+  dashboardSidebar(
+    width = 350,
+    sidebarMenu(
+      convertMenuItem(
+        menuItem("Map & Plot",tabName = "map", icon = icon("map"),
+              selectInput(
+                "select_category",
+                label = h3("Topic:"),
+                c("Please select an option below" = "",
+                  "Population" = "Pop",
+                  "Transportation" = "Tran",
+                  "Housing" = "Housing",
+                  "Health" = "Health",
+                  "Employment" = "Emp"
+                )
+              )
+              ),'map'),
+              
+      uiOutput("secondSelection"),
+  
+      uiOutput("thirdSelection"),
+  
+      uiOutput("GeoSelection"),
+  
+      uiOutput("slider"),
+        
+      menuItem("Data Table", tabName = "dt", icon = icon("th")),
+      
+      uiOutput("download_dt")
+      
+    )
     
-    sidebarPanel(
-      
-      helpText("Visualize and Download ACS data for the Greater Nashville Region.",
-               p(),
-               "Begin by selecting a Census Topic"),
-      
-      selectInput(
-        "select_category",
-        label = h3("Topic:"),
-        c("Please select an option below" = "",
-          "Population" = "Pop",
-          "Transportation" = "Tran",
-          "Housing" = "Housing",
-          "Health" = "Health",
-          "Employment" = "Emp"
+    
+  ),
+  
+  dashboardBody(
+    
+    tabItems(
+    
+      tabItem(tabName = "map",
+        fluidRow(
+          leafletOutput("mymap", height = 500) %>%
+                withSpinner(type = getOption("spinner.type", default = 5))
+              
+          ),
+
+        fluidRow(
+
+          column(2,
+                 uiOutput("plot_type"),
+                 uiOutput("plot_filter_county"),
+                 uiOutput("plot_filter_tract"),
+                 uiOutput("plot_filter_bg")
+
+          ),
+
+          column(10,
+                 br(),
+                 plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5))
+
+          )
         )
       ),
       
-      uiOutput("secondSelection"),
-      
-      uiOutput("thirdSelection"),
-      
-      uiOutput("GeoSelection"),
-      
-      uiOutput("slider")
-      
-      
-      ),
-    
-    mainPanel(
-      leafletOutput("mymap", height = 675) %>% withSpinner(type = getOption("spinner.type", default = 5))
-
+      tabItem(tabName = "dt",
+              uiOutput("dt")
+              # ,
+              # uiOutput("download_dt")
+      )
     )
-  ),
-  
-  
-  hr(),
-  
-  fluidRow(
-
-    column(3,
-           uiOutput("plot_type"),
-           uiOutput("plot_filter_county"),
-           uiOutput("plot_filter_tract"),
-           uiOutput("plot_filter_bg")
-
-    ),
-
-    column(8, offset = 1,
-           h4(),
-           plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5))
-
-    )
-  ),
-  
-  verbatimTextOutput("event"),
-
-  hr(),
-
-  uiOutput("dt"),
-
-  uiOutput("download_dt")
-  
-  # textOutput("test")
-
+  )
 )
+
+# ui <- fluidPage(
+#   titlePanel(h1("GNRC Census Explorer")), 
+#   
+#   sidebarLayout(
+#     
+#     sidebarPanel(
+#       
+#       helpText("Visualize and Download ACS data for the Greater Nashville Region.",
+#                p(),
+#                "Begin by selecting a Census Topic"),
+#       
+#       selectInput(
+#         "select_category",
+#         label = h3("Topic:"),
+#         c("Please select an option below" = "",
+#           "Population" = "Pop",
+#           "Transportation" = "Tran",
+#           "Housing" = "Housing",
+#           "Health" = "Health",
+#           "Employment" = "Emp"
+#         )
+#       ),
+#       
+#       uiOutput("secondSelection"),
+#       
+#       uiOutput("thirdSelection"),
+#       
+#       uiOutput("GeoSelection"),
+#       
+#       uiOutput("slider")
+#       
+#       
+#       ),
+#     
+#     mainPanel(
+#       leafletOutput("mymap", height = 675) %>% withSpinner(type = getOption("spinner.type", default = 5))
+# 
+#     )
+#   ),
+#   
+#   
+#   hr(),
+#   
+#   fluidRow(
+# 
+#     column(3,
+#            uiOutput("plot_type"),
+#            uiOutput("plot_filter_county"),
+#            uiOutput("plot_filter_tract"),
+#            uiOutput("plot_filter_bg")
+# 
+#     ),
+# 
+#     column(8, offset = 1,
+#            h4(),
+#            plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5))
+# 
+#     )
+#   ),
+#   
+#   verbatimTextOutput("event"),
+# 
+#   hr(),
+# 
+#   uiOutput("dt"),
+# 
+#   uiOutput("download_dt")
+#   
+#   # textOutput("test")
+# 
+# )
 
 
 # SERVER -----------------------------------------------------------
@@ -525,7 +611,7 @@ server <-  function(input, output, session){
         weight = 3,
         stroke = T,
         color = "#33FFF3",
-        opacity = 0.5,
+        opacity = 1,
         highlight = highlightOptions(color = "#33FFF3",weight = 4,bringToFront = TRUE),
         label = lapply(label,HTML),
         group = 'Selected'
@@ -580,9 +666,6 @@ server <-  function(input, output, session){
           )
     }
   })
-  
-  # Map Markers -----
-  
   
   # Data Table -----
   
@@ -692,13 +775,22 @@ server <-  function(input, output, session){
     }
   )
 
+  # output$download_dt <- renderUI({
+  # 
+  #   req(input$select_var)
+  # 
+  #   fluidRow(
+  # 
+  #     column(10),downloadButton("downloadData", "Download Spreadsheet"))
+  # })
+  
   output$download_dt <- renderUI({
-
+    
     req(input$select_var)
-
+    
     fluidRow(
-
-      column(10),downloadButton("downloadData", "Download Spreadsheet"))
+      
+      column(1),downloadButton("downloadData", "Download Spreadsheet"))
   })
 
 
