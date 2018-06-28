@@ -46,10 +46,9 @@ ui <- fluidPage(
     
     sidebarPanel(
       
-      helpText("Create demographic maps with 
-               information from the US Census.",
+      helpText("Visualize and Download ACS data for the Greater Nashville Region.",
                p(),
-               "Begin by selecting a variable."),
+               "Begin by selecting a Census Topic"),
       
       selectInput(
         "select_category",
@@ -100,7 +99,7 @@ ui <- fluidPage(
     )
   ),
   
-  # verbatimTextOutput("event"),
+  verbatimTextOutput("event"),
 
   hr(),
 
@@ -402,12 +401,6 @@ server <-  function(input, output, session){
 
     } 
     
-    # else if (sum(is.na(filtered_data()[[input$select_attr]]))>0){
-    # 
-    #   'grey'
-    # 
-    # } 
-    
     else {
 
       tryCatch(colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]),
@@ -501,6 +494,42 @@ server <-  function(input, output, session){
         label = lapply(places_label_txt(),HTML),
         group = 'Places'
       ) 
+  })
+  
+  # Map - Selected Boundary -----
+  
+  observe({
+
+    req(selected_boundary())
+    
+    # Data
+    filtered_data()%>%
+      filter(NAME == selected_boundary()) -> sd
+    
+    # Label
+    
+    sd %>%
+      st_set_geometry(NULL) %>%
+      ungroup() %>%
+      pull(input$select_attr) %>%
+      round(digits = 3) -> map_var
+    
+    label <- paste("<strong>",selected_boundary(),"</strong><br>",input$select_attr,": ",map_var,sep = '')
+    
+
+    leafletProxy("mymap", data = sd) %>%
+      clearGroup('Selected') %>%
+      addPolygons(
+        data = sd,
+        fillOpacity = 0,
+        weight = 3,
+        stroke = T,
+        color = "#33FFF3",
+        opacity = 0.5,
+        highlight = highlightOptions(color = "#33FFF3",weight = 4,bringToFront = TRUE),
+        label = lapply(label,HTML),
+        group = 'Selected'
+      )
   })
   
   # Map Legend -----
@@ -762,11 +791,36 @@ server <-  function(input, output, session){
 
   # Plot Event Data -----
   
-  # output$event <- renderPrint({
-  # 
-  #   event_data("plotly_click", source = "select")
-  # 
-  #   })
+  select_event <- reactive({
+    
+    event_data("plotly_click", source = "select")
+    
+  })
+  
+  selected_boundary <- reactive({
+    
+    req(select_event())
+    
+    plot_data()$NAME[row.names(plot_data()) == as.character(select_event()[5])]
+    
+  })
+  
+  output$event <- renderPrint({
+    
+    req(select_event())
+
+    # ed <- event_data("plotly_click", source = "select")
+    
+    # ed[5]
+    
+    # row.names(plot_data())
+    
+    # row.names(plot_data()) == as.character(ed[5])
+    
+    plot_data()$NAME[row.names(plot_data()) == as.character(select_event()[5])]
+
+    })
+
 
   # Plot Controls -----
   
@@ -970,6 +1024,8 @@ server <-  function(input, output, session){
     else{req(input$select_attr)}
     
     if(input$selected_plot == 'Scatter Plot'){
+      
+    key <- row.names(plot_data())
 
     y <- list(
       title = "Count")
@@ -978,6 +1034,7 @@ server <-  function(input, output, session){
       plot_ly(
         x = ~ Vintage,
         y = ~ get(input$select_attr),
+        key = ~key,
         color = ~ NAME,
         colors = viridis_pal(option = "D")(3),
         hovertext = ~ NAME,

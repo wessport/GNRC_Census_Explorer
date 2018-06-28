@@ -277,7 +277,10 @@ leaflet(f_cnty_data) %>%
     group = "labels",
     options = providerTileOptions(zIndex = 3, pane = 'markerPane')
   ) %>%
-  addLayersControl(overlayGroups = c("polygons", "labels"))
+  addLayersControl(overlayGroups = c("polygons", "labels")) %>%
+  addMarkers(-86.7849,36.16947)
+
+
 
 
 f_cnty_data %>%
@@ -497,3 +500,17 @@ colnames(labs) <- 'label'
 
 labs %>%
   mutate(label_mod = ifelse(grepl(' --!!Total estimate',label)|grepl(' --!!Total moe',label),gsub(" --!!"," ",label),gsub(" --!!Total","",label)))
+
+
+
+# Centroid
+
+geom %>%
+  filter(Vintage == 2016 & NAME == 'Davidson County, Tennessee') %>% 
+  st_centroid()
+  
+
+row.names(places)
+
+places$NAME[row.names(places) == 1]
+
