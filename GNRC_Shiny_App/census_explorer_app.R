@@ -28,47 +28,44 @@ library(sf)
 library(tidyverse)
 library(viridis)
 
+#Global -----
 
 # Import data
-# load("./data/county_di.RData")
-# load("./data/tract_di.RData")
-# load("./data/bg_di.RData")
-load("./data/di.RData")
-
 places <- readRDS("./data/places.rds")
 geom <- readRDS("./data/geometry.rds")
 
-# Display tab content in dashboardBody()with menuItem
-convertMenuItem <- function(mi,tabName) {
-  mi$children[[1]]$attribs['data-toggle']="tab"
-  mi$children[[1]]$attribs['data-value'] = tabName
-  mi
-}
+# # Display tab content in dashboardBody()with menuItem
+# convertMenuItem <- function(mi,tabName) {
+#   mi$children[[1]]$attribs['data-toggle']="tab"
+#   mi$children[[1]]$attribs['data-value'] = tabName
+#   mi
+# }
 
 # UI ----------------------------------------------------------------
 
 ui <- dashboardPage(
   
+  # UI Header ----
   dashboardHeader(title = "GNRC Census Explorer",
                   titleWidth = 350),
   
+  # UI Sidebar ----
   dashboardSidebar(
     width = 350,
     sidebarMenu(
-      convertMenuItem(
-        menuItem("Map & Plot",tabName = "map", icon = icon("map"),
-              selectInput(
-                "select_category",
-                label = h3("Topic:"),
-                c("Please select an option below" = "",
-                  "Population" = "Pop",
-                  "Transportation" = "Tran",
-                  "Housing" = "Housing",
-                  "Health" = "Health",
-                  "Employment" = "Emp"
-                )
-              )
-              ),'map'),
+      
+      menuItem("Map & Plot",tabName = "map", icon = icon("map")),
+      selectInput(
+        "select_category",
+        label = h3("Topic:"),
+        c("Please select an option below" = "",
+          "Population" = "Pop",
+          "Transportation" = "Tran",
+          "Housing" = "Housing",
+          "Health" = "Health",
+          "Employment" = "Emp"
+        )
+      ),
               
       uiOutput("secondSelection"),
   
@@ -87,37 +84,47 @@ ui <- dashboardPage(
     
   ),
   
+  # UI Body ----
   dashboardBody(
     
     tabItems(
     
       tabItem(tabName = "map",
-        fluidRow(
-          leafletOutput("mymap", height = 500) %>%
-                withSpinner(type = getOption("spinner.type", default = 5))
+        fluidRow(box(      
+          fluidRow(column(12,
+            leafletOutput("mymap", height = 500) %>%
+                  withSpinner(type = getOption("spinner.type", default = 5)))),status = 'primary',width=12)),
+
+        fluidRow(box(
+          
+          fluidRow(column(8,column(11,offset=1,htmlOutput('p_title'),
+                          tags$head(tags$style("#p_title{color: black;font-size: 16px;font-style: bold;}"))))),
+          
+          fluidRow(
+            column(12,br(),plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5)))),
+          
+          fluidRow(
+              column(2, uiOutput("plot_type")),
+              column(2, offset = 1, uiOutput("plot_filter_county")),
+              column(2, offset = 1, uiOutput("plot_filter_tract")),
+              column(2, offset = 1, uiOutput("plot_filter_bg"))
+            ),
+          
+          fluidRow(column(12,h2("Regional Period Statistics"))),
+          
+          fluidRow(
+            
+            column(6,valueBoxOutput("totalChangeBox")),
+            column(6,valueBoxOutput("percChangeBox"))
               
-          ),
-
-        fluidRow(
-
-          column(2,
-                 uiOutput("plot_type"),
-                 uiOutput("plot_filter_county"),
-                 uiOutput("plot_filter_tract"),
-                 uiOutput("plot_filter_bg")
-
-          ),
-
-          column(10,
-                 br(),
-                 plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5))
-
-          )
-        )
+            ),status = 'success', width = 12))
+        
+        
       ),
       
       tabItem(tabName = "dt",
-              uiOutput("dt")
+              box(
+              uiOutput("dt"),status = 'warning', width = 12)
               # ,
               # uiOutput("download_dt")
       )
@@ -335,15 +342,6 @@ server <-  function(input, output, session){
       c("Please select an option below" = "", attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")])
     )
   })
-  
-  # User switches data Topic
-  
-  # observeEvent(input$select_category, updateSelectInput(session,input='select_var',selected=''))
-  # observeEvent(input$select_category, updateSelectInput(session,input='select_attr',selected=''))
-  # 
-  # # User switches data category(variable old)
-  # 
-  # eventReactive(input$select_var, updateSelectInput(session,input='select_attr',selected=''))
 
   # Geographic Boundary
   
@@ -351,24 +349,20 @@ server <-  function(input, output, session){
     
     req(input$select_attr)
     
-    # if (input$select_attr == ''){}
-    
-    # else {
-      
       selectInput(
         "select_geo",
         label = h3("Geographic Division:"),
         c("Please select an option below" = "", "Automatic by Zoom Level","County","Tract","Block Group")
       )
-    # }
+
   })
   
-  # Vintage slider
+  # Map Vintage slider
   output$slider <- renderUI({
 
     req(input$select_attr)
 
-    sliderInput("yr", "Data Vintage:", min = 2011, max = 2016, value = 2016, sep = '')
+    sliderInput("yr", "Map Vintage:", min = 2011, max = 2016, value = 2016, sep = '')
     })
 
   
@@ -681,11 +675,9 @@ server <-  function(input, output, session){
     
     DT::datatable(
       table_data(),
-      extensions = 'FixedHeader',
       options = list(
         scrollX = TRUE,
-        fixedHeader = TRUE,
-        pageLength = 5
+        pageLength = 10
       )
     )
   })
@@ -695,13 +687,11 @@ server <-  function(input, output, session){
     table_data() %>%
       filter(Level == 'county') %>%
       DT::datatable(
-        extensions = 'FixedHeader',
         options = list(
           autoWidth = TRUE,
           columnDefs = list(list(width = '300px', targets = c(2,which(str_count(colnames(table_data()), ' ')>6)))),
           scrollX = TRUE,
-          fixedHeader = TRUE,
-          pageLength = 5
+          pageLength = 10
         )
       )
   })
@@ -711,13 +701,11 @@ server <-  function(input, output, session){
     table_data() %>%
       filter(Level == 'tract') %>%
       DT::datatable(
-        extensions = 'FixedHeader',
         options = list(
           autoWidth = TRUE,
           columnDefs = list(list(width = '300px', targets = c(2,which(str_count(colnames(table_data()), ' ')>6)))),
           scrollX = TRUE,
-          fixedHeader = TRUE,
-          pageLength = 5
+          pageLength = 10
         )
       )
   })
@@ -727,41 +715,85 @@ server <-  function(input, output, session){
     table_data() %>%
       filter(Level == 'block group') %>%
       DT::datatable(
-        extensions = 'FixedHeader',
         options = list(
           autoWidth = TRUE,
           columnDefs = list(list(width = '300px', targets = c(2,which(str_count(colnames(table_data()), ' ')>6)))),
           scrollX = TRUE,
-          fixedHeader = FALSE,
-          pageLength = 5
+          pageLength = 10
         )
       )
   })
   
-  
-  
+  # Render data table
   output$dt <- renderUI({
 
-    req(input$select_var)
+    # req(input$select_var)
 
-    if(is.null(input$select_var)){}
-
-    else if (input$select_var == ''){}
-
-    else {
-
-      fluidRow(column(12), 
-
-               tabsetPanel(
-                 id = 'dataset',
-                 tabPanel("County", DT::dataTableOutput("dt_county")),
-                 tabPanel("Tract", DT::dataTableOutput("dt_tract")),
-                 tabPanel("Block Group", DT::dataTableOutput("dt_bg"))
-               )
-               )
-
+    if(is.null(input$select_var)){
+      fluidRow(column(12,h4('Here you can interact with a table of selected census data. To generate a table please begin by selecting a census topic and category.')))
     }
 
+    else if (input$select_var == ''){
+      fluidRow(column(12,h4('Here you can interact with a table of selected census data. To generate a table please begin by selecting a census topic and category.')))
+    }
+    
+    else {
+
+     
+      tabBox(
+           tabPanel(HTML(paste(icon('th-list'),"County",sep=' ')),DT::dataTableOutput("dt_county")),
+           tabPanel(HTML(paste(icon('th-list'),"Tract",sep=' ')), DT::dataTableOutput("dt_tract")),
+           tabPanel(HTML(paste(icon('th-list'),"Block Group",sep=' ')), DT::dataTableOutput("dt_bg")),
+           width=12
+     )
+    }
+
+  })
+  
+  # Data Period Statistics -----
+  
+  total_change <- reactive({
+    req(table_data())
+    
+    table_data() %>%
+      select(input$select_attr, Vintage)%>%
+      filter(Vintage == 2011) -> vi
+    
+    table_data() %>%
+      select(input$select_attr, Vintage)%>%
+      filter(Vintage == 2016) -> vf
+    
+    vf-vi
+    
+  })
+  
+  perc_change <- reactive({
+    req(table_data())
+    
+    table_data() %>%
+      select(input$select_attr, Vintage)%>%
+      filter(Vintage == 2011) -> vi
+    
+    table_data() %>%
+      select(input$select_attr, Vintage)%>%
+      filter(Vintage == 2016) -> vf
+    
+    round(((vf-vi)/abs(vi)*100),3)
+    
+  })
+  
+  output$totalChangeBox <- renderValueBox({
+    valueBox(
+      total_change(), "Total Change", icon = icon("list"),
+      color = "purple"
+    )
+  })
+  
+  output$percChangeBox <- renderValueBox({
+    valueBox(
+      perc_change(), "Percent Change", icon = icon("list"),
+      color = "green"
+    )
   })
   
   # Download Data ----- 
@@ -923,7 +955,7 @@ server <-  function(input, output, session){
     
     selectInput(
       "selected_plot",
-      label = h3("Plot Type"),
+      NULL,
       c("Scatter Plot","Horizontal Bar Plot")
     )
     
@@ -987,13 +1019,13 @@ server <-  function(input, output, session){
     if(values$geo_level=='county'){
       selectInput(
         "selected_cfilter",
-        label = h3("Filter Data Points by County:"),
-        c("Please select an option below" = "", "All",county_names())
+        NULL,
+        c("County..." = "", "All",county_names())
       )
     } else if(values$geo_level == 'tract' | values$geo_level == 'block group'){
       selectInput(
         "selected_cfilter",
-        label = h3("Filter Data Points by County:"),
+        NULL,
         c("Davidson County, Tennessee" = "", county_names())
       )
     }
@@ -1007,15 +1039,15 @@ server <-  function(input, output, session){
     if(values$geo_level == 'tract'){
       selectInput(
         "selected_tfilter",
-        label = h3("Filter Data Points by Tract:"),
-        c("Please select an option below" = "", "All",tract_names())
+        NULL,
+        c("Tract..." = "", "All",tract_names())
       )
     } else if (values$geo_level == 'block group'){
 
       selectInput(
         "selected_tfilter",
-        label = h3("Filter Data Points by Tract:"),
-        c("Please select an option below" = "", "All",tract_names())
+        NULL,
+        c("Tract..." = "", "All",tract_names())
       )
 
     }
@@ -1032,8 +1064,8 @@ server <-  function(input, output, session){
 
       selectInput(
         "selected_bgfilter",
-        label = h3("Filter Data Points by Block Group:"),
-        c("Please select an option below" = "", "All",blockgroup_names())
+        NULL,
+        c("Block group..." = "", "All",blockgroup_names())
       )
     }
 
@@ -1048,26 +1080,26 @@ server <-  function(input, output, session){
     if(values$geo_level == 'county'){
       if(input$selected_cfilter == '' | input$selected_cfilter == 'All'){
 
-        input$select_attr
+        paste(tags$b(input$select_attr),sep='')
 
-      } else { paste(input$select_attr,input$selected_cfilter, sep = '<br>')}
+      } else { paste(tags$b(input$select_attr),tags$b(input$selected_cfilter), sep = ' - ')}
 
     } else if(values$geo_level == 'tract'){
 
       if(input$selected_cfilter == '' & (input$selected_tfilter == '' |input$selected_tfilter == 'All')){
 
-          paste(input$select_attr, 'Davidson County, Tennessee', sep = '<br>')
+          paste(tags$b(input$select_attr), tags$b('Davidson County, Tennessee'), sep = ' - ')
 
       } else if (input$selected_cfilter != '' & (input$selected_tfilter == '' | input$selected_tfilter == 'All')){
 
-        paste(input$select_attr, input$selected_cfilter, sep = '<br>')
+        paste(tags$b(input$select_attr), tags$b(input$selected_cfilter), sep = ' - ')
 
       } else if (input$selected_cfilter == '' & input$selected_tfilter != ''){
 
-          paste(input$select_attr, input$selected_tfilter, sep = '<br>')
+          paste(tags$b(input$select_attr), tags$b(input$selected_tfilter), sep = ' - ')
       } else {
 
-        paste(input$select_attr, input$selected_tfilter, sep = '<br>')
+        paste(tags$b(input$select_attr), tags$b(input$selected_tfilter), sep = ' - ')
       }
 
     } else if (values$geo_level == 'block group'){
@@ -1076,29 +1108,29 @@ server <-  function(input, output, session){
          (input$selected_tfilter == '' | input$selected_tfilter == 'All') &
          (input$selected_bgfilter == '' | input$selected_bgfilter == 'All')) {
 
-          paste(input$select_attr, 'Davidson County, Tennessee', sep = '<br>')
+          paste(tags$b(input$select_attr), tags$b('Davidson County, Tennessee'), sep = ' - ')
 
       } else if (input$selected_cfilter != '' &
                  (input$selected_tfilter == '' | input$selected_tfilter == 'All') &
                  (input$selected_bgfilter == '' | input$selected_bgfilter == 'All')){
 
-        paste(input$select_attr, input$selected_cfilter, sep = '<br>')
+        paste(tags$b(input$select_attr), tags$b(input$selected_cfilter), sep = ' - ')
 
       } else if (input$selected_cfilter == '' & input$selected_tfilter != '' & input$selected_bgfilter == ''){
 
-        paste(input$select_attr, input$selected_tfilter, sep = '<br>')
+        paste(tags$b(input$select_attr), tags$b(input$selected_tfilter), sep = ' - ')
 
       } else if (input$selected_cfilter == '' & input$selected_tfilter == '' & input$selected_bgfilter != ''){
 
-        paste(input$select_attr, input$selected_bgfilter, sep = '<br>')
+        paste(tags$b(input$select_attr), tags$b(input$selected_bgfilter), sep = ' - ')
 
       } else if (input$selected_cfilter != '' & input$selected_tfilter != '' & (input$selected_bgfilter == '' | input$selected_bgfilter == 'All')){
 
-        paste(input$select_attr, input$selected_tfilter, sep = '<br>')
+        paste(tags$b(input$select_attr), tags$b(input$selected_tfilter), sep = ' - ')
 
       } else {
 
-        paste(input$select_attr, input$selected_bgfilter, sep = '<br>')
+        paste(tags$b(input$select_attr), tags$b(input$selected_bgfilter), sep = ' - ')
 
       }
 
@@ -1106,6 +1138,13 @@ server <-  function(input, output, session){
 
   })
 
+  output$p_title <- renderText({
+    
+    req(input$selected_plot)
+    plot_title()
+    
+    })
+  
   # Plots -----
 
   output$plot1 <- renderPlotly({
@@ -1134,7 +1173,8 @@ server <-  function(input, output, session){
         mode = 'lines+markers',
         source = "select"
       ) %>%
-      layout(title=plot_title(),yaxis = y)
+      # layout(title=plot_title(),yaxis = y)
+      layout(title=FALSE,yaxis = y)
     
     } else {
       
@@ -1163,18 +1203,18 @@ server <-  function(input, output, session){
             orientation = 'h',
             marker = list(
               # color = 'rgba(50, 171, 96, 0.6)',
-              color = 'rgb(154, 208, 245, 0.6)',
-              line = list(color = 'rgba(50, 171, 96, 1.0)', width = 1)
+              color = 'rgba(60, 141, 188, 1.0)',
+              line = list(color = 'rgba(60, 141, 188, 1.0)', width = 1)
             )
           ) %>%
           layout(
-            title = plot_title(),
+            title = FALSE,
             xaxis = x_axis,
             yaxis = y_axis,
             margin = list(
               l = 100,
               r = 20,
-              t = 70,
+              t = 0,
               b = 70
             )
           )
@@ -1184,11 +1224,11 @@ server <-  function(input, output, session){
   })
 
 # Test / Trouble shooting
-# output$test <- renderPrint({
-# 
-#   output$event
-# 
-# })
+output$test <- renderPrint({
+
+  total_change()
+
+})
 
 }
 
