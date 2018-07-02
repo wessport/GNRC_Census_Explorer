@@ -101,8 +101,8 @@ ui <- dashboardPage(
                           tags$head(tags$style("#p_title{color: black;font-size: 16px;font-style: bold;}"))))),
           
           fluidRow(
-            column(12,br(),plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5)))),
-          
+            column(12,plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5)))),
+          br(),
           fluidRow(
               column(2, uiOutput("plot_type")),
               column(2, offset = 1, uiOutput("plot_filter_county")),
@@ -113,11 +113,17 @@ ui <- dashboardPage(
           fluidRow(column(12,h2("Regional Period Statistics"))),
           
           fluidRow(
-            
-            column(6,valueBoxOutput("totalChangeBox")),
-            column(6,valueBoxOutput("percChangeBox"))
-              
-            ),status = 'success', width = 12))
+            valueBoxOutput("totalChangeBox"),
+            valueBoxOutput("percChangeBox"),
+            valueBoxOutput("roChangeBox")
+            ),
+          fluidRow(
+            valueBoxOutput("minGainBox"),
+            valueBoxOutput("maxGainBox"),
+            valueBoxOutput("averageBox")
+          ),status = 'success', width = 12))
+        
+          # verbatimTextOutput("test")
         
         
       ),
@@ -125,84 +131,10 @@ ui <- dashboardPage(
       tabItem(tabName = "dt",
               box(
               uiOutput("dt"),status = 'warning', width = 12)
-              # ,
-              # uiOutput("download_dt")
       )
     )
   )
 )
-
-# ui <- fluidPage(
-#   titlePanel(h1("GNRC Census Explorer")), 
-#   
-#   sidebarLayout(
-#     
-#     sidebarPanel(
-#       
-#       helpText("Visualize and Download ACS data for the Greater Nashville Region.",
-#                p(),
-#                "Begin by selecting a Census Topic"),
-#       
-#       selectInput(
-#         "select_category",
-#         label = h3("Topic:"),
-#         c("Please select an option below" = "",
-#           "Population" = "Pop",
-#           "Transportation" = "Tran",
-#           "Housing" = "Housing",
-#           "Health" = "Health",
-#           "Employment" = "Emp"
-#         )
-#       ),
-#       
-#       uiOutput("secondSelection"),
-#       
-#       uiOutput("thirdSelection"),
-#       
-#       uiOutput("GeoSelection"),
-#       
-#       uiOutput("slider")
-#       
-#       
-#       ),
-#     
-#     mainPanel(
-#       leafletOutput("mymap", height = 675) %>% withSpinner(type = getOption("spinner.type", default = 5))
-# 
-#     )
-#   ),
-#   
-#   
-#   hr(),
-#   
-#   fluidRow(
-# 
-#     column(3,
-#            uiOutput("plot_type"),
-#            uiOutput("plot_filter_county"),
-#            uiOutput("plot_filter_tract"),
-#            uiOutput("plot_filter_bg")
-# 
-#     ),
-# 
-#     column(8, offset = 1,
-#            h4(),
-#            plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5))
-# 
-#     )
-#   ),
-#   
-#   verbatimTextOutput("event"),
-# 
-#   hr(),
-# 
-#   uiOutput("dt"),
-# 
-#   uiOutput("download_dt")
-#   
-#   # textOutput("test")
-# 
-# )
 
 
 # SERVER -----------------------------------------------------------
@@ -752,47 +684,486 @@ server <-  function(input, output, session){
   
   # Data Period Statistics -----
   
+  f_vi_all <- reactive({
+    
+    req(input$selected_cfilter)
+    
+    plot_data() %>%
+      filter(Vintage == 2011)%>%
+      ungroup() %>%
+      summarise(avg = mean(get(input$select_attr)))%>%
+      select(avg)
+    
+  })
+  
+  f_vi_solo <- reactive({
+    
+    req(input$selected_cfilter)
+    
+    plot_data() %>%
+      filter(Vintage == 2011) %>%
+      ungroup()%>%
+      select(input$select_attr)
+    
+  })
+  
+  f_vf_all <- reactive({
+    
+    req(input$selected_cfilter)
+    
+    plot_data() %>%
+      filter(Vintage == 2016)%>%
+      ungroup() %>%
+      summarise(avg = mean(get(input$select_attr)))%>%
+      select(avg)
+    
+  })
+  
+  f_vf_solo <- reactive({
+    
+    req(input$selected_cfilter)
+    
+    plot_data() %>%
+      filter(Vintage == 2016) %>%
+      ungroup()%>%
+      select(input$select_attr)
+    
+  })
+  
+  # vi <- reactive({
+  #   
+  #   if(values$geo_level == 'county'){
+  #   
+  #     if(input$selected_cfilter == 'All'){
+  #       
+  #       f_vi_all()
+  #       
+  #     } else {
+  #     
+  #       f_vi_solo()
+  #         
+  #     }
+  #   } else if(values$geo_level == 'tract'){
+  #     
+  #     if(input$selected_tfilter == 'All'){
+  #       
+  #       f_vi_all()
+  #       
+  #     } else {
+  #       
+  #       f_vi_solo()
+  #       
+  #     }
+  #   } else if(values$geo_level == 'block group'){
+  #     
+  #     if(input$selected_tfilter == 'All' | input$selected_bgfilter == 'All'){
+  #       
+  #       f_vi_all()
+  #       
+  #     } else {
+  #       
+  #       f_vi_solo()
+  #       
+  #     }
+  #   }
+  # })
+  # 
+  # vf <- reactive({
+  #   
+  #   if(values$geo_level == 'county'){
+  #     
+  #     if(input$selected_cfilter == 'All'){
+  #       
+  #       f_vf_all()
+  #       
+  #     } else {
+  #       
+  #       f_vf_solo()
+  #       
+  #     }
+  #   } else if(values$geo_level == 'tract'){
+  #     
+  #     if(input$selected_tfilter == 'All'){
+  #       
+  #       f_vf_all()
+  #       
+  #     } else {
+  #       
+  #       f_vf_solo()
+  #       
+  #     }
+  #   } else if(values$geo_level == 'block group'){
+  #     
+  #     if(input$selected_tfilter == 'All' | input$selected_bgfilter == 'All'){
+  #       
+  #       f_vf_all()
+  #       
+  #     } else {
+  #       
+  #       f_vf_solo()
+  #       
+  #     }
+  #   }
+  # })
+
+  # total_change <- reactive({
+  #   
+  #   round((vf()-vi()),3)
+  #   
+  # })
+  # 
+  # perc_change <- reactive({
+  #   
+  #   round(((vf()-vi())/abs(vi())*100),3)
+  #   
+  # })
+  # 
+  # roc <- reactive({
+  #   
+  #   round(total_change()/5,3)
+  #   
+  # })
+  
+  f_minGain_all <- reactive({
+    
+    req(input$selected_cfilter)
+    
+    plot_data() %>%
+      group_by(NAME) %>%
+      select(NAME,input$select_attr,Vintage) %>%
+      mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      summarise(mindiff = min(diff[Vintage<2016]))%>%
+      summarise(meanMinDiff = mean(mindiff))%>%
+      ungroup()%>%
+      select(meanMinDiff) -> fmga
+    
+    round(fmga,3)
+    
+  })
+  
+  f_minGain_solo <- reactive({
+    
+    req(input$selected_cfilter)
+    
+    plot_data() %>%
+      group_by(NAME) %>%
+      filter(Level == values$geo_level) %>%
+      select(input$select_attr,Vintage) %>%
+      mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      summarise(mindiff = min(diff[Vintage<2016]))%>%
+      ungroup()%>%
+      select(mindiff) -> fmgs
+    
+    round(fmgs,3)
+    
+  })
+  
+  f_maxGain_all <- reactive({
+    
+    req(input$selected_cfilter)
+    
+    plot_data() %>%
+      group_by(NAME) %>%
+      select(NAME,input$select_attr,Vintage) %>%
+      mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      summarise(maxdiff = max(diff[Vintage<2016]))%>%
+      summarise(meanmaxDiff = mean(maxdiff))%>%
+      ungroup()%>%
+      select(meanmaxDiff) -> fmga
+    
+    round(fmga,3)
+    
+  })
+  
+  f_maxGain_solo <- reactive({
+    
+    req(input$selected_cfilter)
+    
+    plot_data() %>%
+      group_by(NAME) %>%
+      filter(Level == values$geo_level) %>%
+      select(input$select_attr,Vintage) %>%
+      mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      summarise(maxdiff = max(diff[Vintage<2016]))%>%
+      ungroup()%>%
+      select(maxdiff) -> fmgs
+    
+    round(fmgs,3)
+    
+  })
+  
+  # minGain <- reactive({
+  #   
+  #   if(values$geo_level == 'county'){
+  #     
+  #     if(input$selected_cfilter == 'All'){
+  #   
+  #       f_minGain_all()
+  #       
+  #     } else {
+  #       
+  #       f_minGain_solo()
+  #       
+  #     }
+  #   } else if (values$geo_level == 'tract'){
+  #     
+  #     if(input$selected_tfilter == 'All'){
+  #       
+  #       f_minGain_all()
+  #       
+  #     } else {
+  #       
+  #       f_minGain_solo()
+  #       
+  #     }
+  #     
+  #   } else if (values$geo_level == 'block group'){
+  #     
+  #     if(input$selected_bgfilter == 'All'){
+  #       
+  #       f_minGain_all()
+  #       
+  #     } else {
+  #       
+  #       f_minGain_solo()
+  #     }
+  #   }
+  # })
+  
+  # maxGain <- reactive({
+  #   
+  #   if(values$geo_level == 'county'){
+  #     
+  #     if(input$selected_cfilter == 'All'){
+  #       
+  #       f_maxGain_all()
+  #       
+  #     } else {
+  #       
+  #       f_maxGain_solo()
+  #       
+  #     }
+  #   } else if (values$geo_level == 'tract'){
+  #     
+  #     if(input$selected_tfilter == 'All'){
+  #       
+  #       f_maxGain_all()
+  #       
+  #     } else {
+  #       
+  #       f_maxGain_solo()
+  #       
+  #     }
+  #     
+  #   } else if (values$geo_level == 'block group'){
+  #     
+  #     if(input$selected_bgfilter == 'All'){
+  #       
+  #       f_maxGain_all()
+  #       
+  #     } else {
+  #       
+  #       f_maxGain_solo()
+  #     }
+  #   }
+  # })
+  
+  f_averageValue_all <- reactive({
+    
+    req(input$selected_cfilter)
+    
+    plot_data() %>%
+      ungroup()%>%
+      summarise(avgVal = mean(get(input$select_attr)))%>%
+      select(avgVal) -> av
+    
+    round(av,3)
+    
+  })
+  
+  f_averageValue_solo <- reactive({
+    
+    req(input$selected_cfilter)
+    
+    plot_data() %>%
+      group_by(NAME) %>%
+      summarise(avgVal = mean(get(input$select_attr)))%>%
+      select(avgVal) -> av
+    
+    round(av,3)
+    
+  })
+  
+  # averageValue <- reactive({
+  # 
+  #   if(values$geo_level == 'county'){
+  # 
+  #     if(input$selected_cfilter == 'All'){
+  # 
+  #       f_averageValue_all()
+  # 
+  #     } else {
+  # 
+  #       f_averageValue_solo()
+  # 
+  #     }
+  #   } else if (values$geo_level == 'tract'){
+  # 
+  #     if(input$selected_tfilter == 'All'){
+  # 
+  #       f_averageValue_all()
+  # 
+  #     } else {
+  # 
+  #       f_averageValue_solo()
+  # 
+  #     }
+  # 
+  #   } else if (values$geo_level == 'block group'){
+  # 
+  #     if(input$selected_bgfilter == 'All'){
+  # 
+  #       f_averageValue_all()
+  # 
+  #     } else {
+  # 
+  #       f_averageValue_solo()
+  #     }
+  #   }
+  # })
+  
+  
+  
+  valueBoxVal <- reactiveValues()
+
+  observe({
+
+    if(values$geo_level == 'county'){
+      
+      req(input$selected_cfilter)
+
+      if(input$selected_cfilter == 'All'){
+
+        valueBoxVal$vi <- f_vi_all()
+        valueBoxVal$vf <- f_vf_all()
+        valueBoxVal$minGain <- f_minGain_all()
+        valueBoxVal$maxGain <- f_maxGain_all()
+        valueBoxVal$averageValue <- f_averageValue_all()
+
+      } else {
+
+        valueBoxVal$vi <- f_vi_solo()
+        valueBoxVal$vf <- f_vf_solo()
+        valueBoxVal$minGain <- f_minGain_solo()
+        valueBoxVal$maxGain <- f_maxGain_solo()
+        valueBoxVal$averageValue <- f_averageValue_solo()
+
+      }
+      
+    } else if (values$geo_level == 'tract'){
+      
+      req(input$selected_tfilter)
+
+      if(input$selected_tfilter == 'All'){
+
+        valueBoxVal$vi <- f_vi_all()
+        valueBoxVal$vf <- f_vf_all()
+        valueBoxVal$minGain <- f_minGain_all()
+        valueBoxVal$maxGain <- f_maxGain_all()
+        valueBoxVal$averageValue <- f_averageValue_all()
+
+      } else {
+
+        valueBoxVal$vi <- f_vi_solo()
+        valueBoxVal$vf <- f_vf_solo()
+        valueBoxVal$minGain <- f_minGain_solo()
+        valueBoxVal$maxGain <- f_maxGain_solo()
+        valueBoxVal$averageValue <- f_averageValue_solo()
+
+      }
+
+    } else if (values$geo_level == 'block group'){
+      
+      req(input$selected_bgfilter)
+
+      if(input$selected_bgfilter == 'All'){
+
+        valueBoxVal$vi <- f_vi_all()
+        valueBoxVal$vf <- f_vf_all()
+        valueBoxVal$minGain <- f_minGain_all()
+        valueBoxVal$maxGain <- f_maxGain_all()
+        valueBoxVal$averageValue <- f_averageValue_all()
+
+      } else {
+
+        valueBoxVal$vi <- f_vi_solo()
+        valueBoxVal$vf <- f_vf_solo()
+        valueBoxVal$minGain <- f_minGain_solo()
+        valueBoxVal$maxGain <- f_maxGain_solo()
+        valueBoxVal$averageValue <- f_averageValue_solo()
+      }
+    }
+})
+  
   total_change <- reactive({
-    req(table_data())
     
-    table_data() %>%
-      select(input$select_attr, Vintage)%>%
-      filter(Vintage == 2011) -> vi
-    
-    table_data() %>%
-      select(input$select_attr, Vintage)%>%
-      filter(Vintage == 2016) -> vf
-    
-    vf-vi
+    round((valueBoxVal$vf-valueBoxVal$vi),3)
     
   })
   
   perc_change <- reactive({
-    req(table_data())
     
-    table_data() %>%
-      select(input$select_attr, Vintage)%>%
-      filter(Vintage == 2011) -> vi
-    
-    table_data() %>%
-      select(input$select_attr, Vintage)%>%
-      filter(Vintage == 2016) -> vf
-    
-    round(((vf-vi)/abs(vi)*100),3)
+    round(((valueBoxVal$vf-valueBoxVal$vi)/abs(valueBoxVal$vi)*100),3)
     
   })
   
+  roc <- reactive({
+    
+    round(total_change()/5,3)
+    
+  })
+  
+  # Value Boxes
   output$totalChangeBox <- renderValueBox({
     valueBox(
-      total_change(), "Total Change", icon = icon("list"),
-      color = "purple"
+      total_change(), "Total Change (2011-2016)", icon = icon("list"),
+      color = "blue", width = 3
     )
   })
   
   output$percChangeBox <- renderValueBox({
     valueBox(
-      perc_change(), "Percent Change", icon = icon("list"),
-      color = "green"
+      paste(perc_change(),'%',sep=''), "Percent Change (2011-2016)", icon = icon("list"),
+      color = "green", width = 3
+    )
+  })
+  
+  output$roChangeBox <- renderValueBox({
+    valueBox(
+      roc(), "Rate of Change (2011-2016)", icon = icon("list"),
+      color = "purple", width = 3
+    )
+  })
+  
+  output$minGainBox <- renderValueBox({
+    valueBox(
+      valueBoxVal$minGain, "Minimum Gain (2011-2016)", icon = icon("list"),
+      color = "blue", width = 3
+    )
+  })
+  
+  
+  output$maxGainBox <- renderValueBox({
+    valueBox(
+      valueBoxVal$maxGain, "Max Gain (2011-2016)", icon = icon("list"),
+      color = "green", width = 3
+    )
+  })
+  
+  output$averageBox <- renderValueBox({
+    valueBox(
+      valueBoxVal$averageValue, "Average Value (2011-2016)", icon = icon("list"),
+      color = "purple", width = 3
     )
   })
   
@@ -1020,13 +1391,14 @@ server <-  function(input, output, session){
       selectInput(
         "selected_cfilter",
         NULL,
-        c("County..." = "", "All",county_names())
+        c("All",county_names())
       )
     } else if(values$geo_level == 'tract' | values$geo_level == 'block group'){
       selectInput(
         "selected_cfilter",
         NULL,
-        c("Davidson County, Tennessee" = "", county_names())
+        # c("Davidson County, Tennessee" = "", county_names())
+        c(county_names())
       )
     }
 
@@ -1040,14 +1412,14 @@ server <-  function(input, output, session){
       selectInput(
         "selected_tfilter",
         NULL,
-        c("Tract..." = "", "All",tract_names())
+        c("All",tract_names())
       )
     } else if (values$geo_level == 'block group'){
 
       selectInput(
         "selected_tfilter",
         NULL,
-        c("Tract..." = "", "All",tract_names())
+        c("All",tract_names())
       )
 
     }
@@ -1065,7 +1437,7 @@ server <-  function(input, output, session){
       selectInput(
         "selected_bgfilter",
         NULL,
-        c("Block group..." = "", "All",blockgroup_names())
+        c("All",blockgroup_names())
       )
     }
 
@@ -1225,8 +1597,8 @@ server <-  function(input, output, session){
 
 # Test / Trouble shooting
 output$test <- renderPrint({
-
-  total_change()
+  
+  f_averageValue_solo()
 
 })
 
