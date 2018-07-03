@@ -11,7 +11,7 @@
 #                                                             #
 #                http://shiny.rstudio.com/                    #
 #                                                             #
-#               Last Updated: 28-JUNE-2018                    #
+#               Last Updated: 02-JULY-2018                    #
 #                                                             #
 ###############################################################
 
@@ -72,8 +72,6 @@ ui <- dashboardPage(
       uiOutput("thirdSelection"),
   
       uiOutput("GeoSelection"),
-  
-      uiOutput("slider"),
         
       menuItem("Data Table", tabName = "dt", icon = icon("th")),
       
@@ -92,6 +90,14 @@ ui <- dashboardPage(
       tabItem(tabName = "map",
         fluidRow(box(      
           fluidRow(column(12,
+            absolutePanel(
+              left = 10, bottom = -20,
+              width = 330, height = "auto",draggable = FALSE,
+
+              uiOutput("slider"),
+
+              style = "opacity: 1.0; z-index: 1000;" ## z-index modification
+            ),              
             leafletOutput("mymap", height = 500) %>%
                   withSpinner(type = getOption("spinner.type", default = 5)))),status = 'primary',width=12)),
 
@@ -110,7 +116,8 @@ ui <- dashboardPage(
               column(2, offset = 1, uiOutput("plot_filter_bg"))
             ),
           
-          fluidRow(column(12,h2("Regional Period Statistics"))),
+          # fluidRow(column(12,h2("Regional Period Statistics"))),
+          fluidRow(column(12,h2(htmlOutput('vbText')))),
           
           fluidRow(
             valueBoxOutput("totalChangeBox"),
@@ -1123,8 +1130,20 @@ server <-  function(input, output, session){
     
   })
   
-  # Value Boxes
+  # Value Boxes -----
+  
+  output$vbText <- renderText({
+    
+    req(input$selected_cfilter)
+    
+    'Regional Period Statistics'
+    
+  })
+  
   output$totalChangeBox <- renderValueBox({
+    
+    req(input$selected_cfilter)
+    
     valueBox(
       total_change(), "Total Change (2011-2016)", icon = icon("list"),
       color = "blue", width = 3
@@ -1132,6 +1151,9 @@ server <-  function(input, output, session){
   })
   
   output$percChangeBox <- renderValueBox({
+    
+    req(input$selected_cfilter)
+    
     valueBox(
       paste(perc_change(),'%',sep=''), "Percent Change (2011-2016)", icon = icon("list"),
       color = "green", width = 3
@@ -1139,6 +1161,9 @@ server <-  function(input, output, session){
   })
   
   output$roChangeBox <- renderValueBox({
+    
+    req(input$selected_cfilter)
+    
     valueBox(
       roc(), "Rate of Change (2011-2016)", icon = icon("list"),
       color = "purple", width = 3
@@ -1146,6 +1171,9 @@ server <-  function(input, output, session){
   })
   
   output$minGainBox <- renderValueBox({
+    
+    req(input$selected_cfilter)
+    
     valueBox(
       valueBoxVal$minGain, "Minimum Gain (2011-2016)", icon = icon("list"),
       color = "blue", width = 3
@@ -1154,6 +1182,9 @@ server <-  function(input, output, session){
   
   
   output$maxGainBox <- renderValueBox({
+    
+    req(input$selected_cfilter)
+    
     valueBox(
       valueBoxVal$maxGain, "Max Gain (2011-2016)", icon = icon("list"),
       color = "green", width = 3
@@ -1161,6 +1192,9 @@ server <-  function(input, output, session){
   })
   
   output$averageBox <- renderValueBox({
+    
+    req(input$selected_cfilter)
+    
     valueBox(
       valueBoxVal$averageValue, "Average Value (2011-2016)", icon = icon("list"),
       color = "purple", width = 3
@@ -1512,8 +1546,13 @@ server <-  function(input, output, session){
 
   output$p_title <- renderText({
     
-    req(input$selected_plot)
-    plot_title()
+    if(is.null(input$selected_cfilter)){}
+    
+    else{
+    
+    req(input$selected_cfilter)
+    
+    plot_title()}
     
     })
   

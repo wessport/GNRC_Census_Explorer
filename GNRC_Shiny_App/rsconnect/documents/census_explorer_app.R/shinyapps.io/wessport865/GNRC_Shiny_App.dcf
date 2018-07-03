@@ -5,9 +5,9 @@ account: wessport865
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 363358
-bundleId: 1438047
+bundleId: 1461467
 url: https://wessport865.shinyapps.io/GNRC_Shiny_App/
-when: 1529438375.22978
+when: 1530564765.95843
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .here|.RData|Diversity_Index.R|Diversity_Index_cache.R|format_CensusTable.R|format_CensusVars.R|Household type including living alone two or more races.rds|Ratio of income to poverty level in the past 12 mo.rds|request_CensusData.R|scratch.r
+ignoredFiles: .here|.RData|.RDataTmp|Diversity_Index.R|Diversity_Index_cache.R|format_CensusTable.R|format_CensusVars.R|Household type including living alone two or more races.rds|Ratio of income to poverty level in the past 12 mo.rds|request_CensusData.R|request_MissingCensus.R|scratch.r
