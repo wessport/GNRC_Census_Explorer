@@ -85,6 +85,12 @@ ui <- dashboardPage(
   # UI Body ----
   dashboardBody(
     
+    tags$head(
+      tags$style(HTML("li { font-size: 20px; }")) #change the font size to 20
+      ),
+    
+    
+    
     tabItems(
     
       tabItem(tabName = "map",
@@ -104,7 +110,10 @@ ui <- dashboardPage(
         fluidRow(box(
           
           fluidRow(column(8,column(11,offset=1,htmlOutput('p_title'),
-                          tags$head(tags$style("#p_title{color: black;font-size: 16px;font-style: bold;}"))))),
+                          tags$head(tags$style("#p_title{color: black;font-size: 16px;font-style: bold;}")))),
+                   
+                   column(2, offset = 2,uiOutput('regressionBox'))
+                   ),
           
           fluidRow(
             column(12,plotlyOutput("plot1") %>% withSpinner(type = getOption("spinner.type", default = 5)))),
@@ -1381,8 +1390,23 @@ server <-  function(input, output, session){
         mode = 'lines+markers',
         source = "select"
       ) %>%
-      # layout(title=plot_title(),yaxis = y)
-      layout(title=FALSE,yaxis = y)
+      layout(title=FALSE,yaxis = y) -> p
+      
+      if(input$checkbox == TRUE & input$selected_cfilter != 'All'){
+        
+        p %>% 
+          plotly::add_trace(p, 
+                            x = ~ Vintage,
+                            y = fitted(lm(get(input$select_attr) ~ Vintage, plot_data())),
+                            name = 'Trend line',
+                            line = list(color = 'rgb(0, 0, 0)', width = 2, dash = 'dash')) -> p
+        p
+        
+      } else{ 
+        
+        p 
+        
+        }
     
     } else {
       
@@ -1428,6 +1452,34 @@ server <-  function(input, output, session){
           )
       
     }
+  })
+  
+  # Regression -----
+  
+  output$regressionBox <- renderUI({
+    
+    if(is.null(input$selected_cfilter)){}
+    
+    else if (values$geo_level == 'county'){
+      
+      req(input$selected_cfilter)
+      
+      checkboxInput("checkbox", label = "Add Regression Line", value = FALSE)
+      
+    } else if (values$geo_level == 'tract'){
+      
+      req(input$selected_tfilter)
+      
+      checkboxInput("checkbox", label = "Add Regression Line", value = FALSE)
+      
+    } else if (values$geo_level == 'block group'){
+      
+      req(input$selected_bgfilter)
+      
+      checkboxInput("checkbox", label = "Add Regression Line", value = FALSE)
+      
+    }
+    
   })
 
 # Test / Trouble shooting
