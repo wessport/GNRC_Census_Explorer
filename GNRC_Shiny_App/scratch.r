@@ -514,3 +514,10 @@ row.names(places)
 
 places$NAME[row.names(places) == 1]
 
+# Find Min where h[5] is not null
+
+subset(h, (!is.na(h[,5])))
+
+j <- subset(h, (!is.na(h[,5])))
+
+min(j$Vintage)

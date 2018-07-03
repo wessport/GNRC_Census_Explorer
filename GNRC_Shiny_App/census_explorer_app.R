@@ -11,7 +11,7 @@
 #                                                             #
 #                http://shiny.rstudio.com/                    #
 #                                                             #
-#               Last Updated: 02-JULY-2018                    #
+#               Last Updated: 03-JULY-2018                    #
 #                                                             #
 ###############################################################
 
@@ -128,7 +128,8 @@ ui <- dashboardPage(
             valueBoxOutput("minGainBox"),
             valueBoxOutput("maxGainBox"),
             valueBoxOutput("averageBox")
-          ),status = 'success', width = 12))
+          ),
+          status = 'success', width = 12))
         
           # verbatimTextOutput("test")
         
@@ -603,7 +604,8 @@ server <-  function(input, output, session){
   # Data Table -----
   
   table_data <- reactive({
-    req(selected_data)
+    
+    req(selected_data())
     
     selected_data() %>% 
       st_set_geometry(NULL)
@@ -677,7 +679,6 @@ server <-  function(input, output, session){
     }
     
     else {
-
      
       tabBox(
            tabPanel(HTML(paste(icon('th-list'),"County",sep=' ')),DT::dataTableOutput("dt_county")),
@@ -692,150 +693,61 @@ server <-  function(input, output, session){
   # Data Period Statistics -----
   
   f_vi_all <- reactive({
-    
-    req(input$selected_cfilter)
-    
-    plot_data() %>%
-      filter(Vintage == 2011)%>%
-      ungroup() %>%
-      summarise(avg = mean(get(input$select_attr)))%>%
-      select(avg)
-    
-  })
-  
-  f_vi_solo <- reactive({
-    
-    req(input$selected_cfilter)
-    
-    plot_data() %>%
-      filter(Vintage == 2011) %>%
-      ungroup()%>%
-      select(input$select_attr)
-    
-  })
-  
-  f_vf_all <- reactive({
-    
-    req(input$selected_cfilter)
-    
-    plot_data() %>%
-      filter(Vintage == 2016)%>%
-      ungroup() %>%
-      summarise(avg = mean(get(input$select_attr)))%>%
-      select(avg)
-    
-  })
-  
-  f_vf_solo <- reactive({
-    
-    req(input$selected_cfilter)
-    
-    plot_data() %>%
-      filter(Vintage == 2016) %>%
-      ungroup()%>%
-      select(input$select_attr)
-    
-  })
-  
-  # vi <- reactive({
-  #   
-  #   if(values$geo_level == 'county'){
-  #   
-  #     if(input$selected_cfilter == 'All'){
-  #       
-  #       f_vi_all()
-  #       
-  #     } else {
-  #     
-  #       f_vi_solo()
-  #         
-  #     }
-  #   } else if(values$geo_level == 'tract'){
-  #     
-  #     if(input$selected_tfilter == 'All'){
-  #       
-  #       f_vi_all()
-  #       
-  #     } else {
-  #       
-  #       f_vi_solo()
-  #       
-  #     }
-  #   } else if(values$geo_level == 'block group'){
-  #     
-  #     if(input$selected_tfilter == 'All' | input$selected_bgfilter == 'All'){
-  #       
-  #       f_vi_all()
-  #       
-  #     } else {
-  #       
-  #       f_vi_solo()
-  #       
-  #     }
-  #   }
-  # })
-  # 
-  # vf <- reactive({
-  #   
-  #   if(values$geo_level == 'county'){
-  #     
-  #     if(input$selected_cfilter == 'All'){
-  #       
-  #       f_vf_all()
-  #       
-  #     } else {
-  #       
-  #       f_vf_solo()
-  #       
-  #     }
-  #   } else if(values$geo_level == 'tract'){
-  #     
-  #     if(input$selected_tfilter == 'All'){
-  #       
-  #       f_vf_all()
-  #       
-  #     } else {
-  #       
-  #       f_vf_solo()
-  #       
-  #     }
-  #   } else if(values$geo_level == 'block group'){
-  #     
-  #     if(input$selected_tfilter == 'All' | input$selected_bgfilter == 'All'){
-  #       
-  #       f_vf_all()
-  #       
-  #     } else {
-  #       
-  #       f_vf_solo()
-  #       
-  #     }
-  #   }
-  # })
 
-  # total_change <- reactive({
-  #   
-  #   round((vf()-vi()),3)
-  #   
-  # })
-  # 
-  # perc_change <- reactive({
-  #   
-  #   round(((vf()-vi())/abs(vi())*100),3)
-  #   
-  # })
-  # 
-  # roc <- reactive({
-  #   
-  #   round(total_change()/5,3)
-  #   
-  # })
-  
-  f_minGain_all <- reactive({
-    
+    req(input$selected_cfilter)
+
+    plot_data() %>%
+      subset((!is.na(plot_data()[,5])))%>%
+      filter(Vintage == min(Vintage))%>%
+      ungroup() %>%
+      summarise(avg = mean(get(input$select_attr)))%>%
+      select(avg)
+
+  })
+
+  f_vi_solo <- reactive({
+
     req(input$selected_cfilter)
     
     plot_data() %>%
+      subset((!is.na(plot_data()[,5])))%>%
+      filter(Vintage == min(Vintage)) %>%
+      ungroup()%>%
+      select(input$select_attr)
+
+  })
+
+  f_vf_all <- reactive({
+
+    req(input$selected_cfilter)
+
+    plot_data() %>%
+      subset((!is.na(plot_data()[,5])))%>%
+      filter(Vintage == max(Vintage))%>%
+      ungroup() %>%
+      summarise(avg = mean(get(input$select_attr)))%>%
+      select(avg)
+
+  })
+
+  f_vf_solo <- reactive({
+
+    req(input$selected_cfilter)
+
+    plot_data() %>%
+      subset((!is.na(plot_data()[,5])))%>%
+      filter(Vintage == max(Vintage)) %>%
+      ungroup()%>%
+      select(input$select_attr)
+
+  })
+
+  f_minGain_all <- reactive({
+
+    req(input$selected_cfilter)
+
+    plot_data() %>%
+      subset((!is.na(plot_data()[,5])))%>%
       group_by(NAME) %>%
       select(NAME,input$select_attr,Vintage) %>%
       mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
@@ -843,16 +755,17 @@ server <-  function(input, output, session){
       summarise(meanMinDiff = mean(mindiff))%>%
       ungroup()%>%
       select(meanMinDiff) -> fmga
-    
+
     round(fmga,3)
-    
+
   })
-  
+
   f_minGain_solo <- reactive({
-    
+
     req(input$selected_cfilter)
-    
+
     plot_data() %>%
+      subset((!is.na(plot_data()[,5])))%>%
       group_by(NAME) %>%
       filter(Level == values$geo_level) %>%
       select(input$select_attr,Vintage) %>%
@@ -860,16 +773,17 @@ server <-  function(input, output, session){
       summarise(mindiff = min(diff[Vintage<2016]))%>%
       ungroup()%>%
       select(mindiff) -> fmgs
-    
+
     round(fmgs,3)
-    
+
   })
-  
+
   f_maxGain_all <- reactive({
-    
+
     req(input$selected_cfilter)
-    
+
     plot_data() %>%
+      subset((!is.na(plot_data()[,5])))%>%
       group_by(NAME) %>%
       select(NAME,input$select_attr,Vintage) %>%
       mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
@@ -877,16 +791,17 @@ server <-  function(input, output, session){
       summarise(meanmaxDiff = mean(maxdiff))%>%
       ungroup()%>%
       select(meanmaxDiff) -> fmga
-    
+
     round(fmga,3)
-    
+
   })
-  
+
   f_maxGain_solo <- reactive({
-    
+
     req(input$selected_cfilter)
-    
+
     plot_data() %>%
+      subset((!is.na(plot_data()[,5])))%>%
       group_by(NAME) %>%
       filter(Level == values$geo_level) %>%
       select(input$select_attr,Vintage) %>%
@@ -894,159 +809,48 @@ server <-  function(input, output, session){
       summarise(maxdiff = max(diff[Vintage<2016]))%>%
       ungroup()%>%
       select(maxdiff) -> fmgs
-    
+
     round(fmgs,3)
-    
+
   })
-  
-  # minGain <- reactive({
-  #   
-  #   if(values$geo_level == 'county'){
-  #     
-  #     if(input$selected_cfilter == 'All'){
-  #   
-  #       f_minGain_all()
-  #       
-  #     } else {
-  #       
-  #       f_minGain_solo()
-  #       
-  #     }
-  #   } else if (values$geo_level == 'tract'){
-  #     
-  #     if(input$selected_tfilter == 'All'){
-  #       
-  #       f_minGain_all()
-  #       
-  #     } else {
-  #       
-  #       f_minGain_solo()
-  #       
-  #     }
-  #     
-  #   } else if (values$geo_level == 'block group'){
-  #     
-  #     if(input$selected_bgfilter == 'All'){
-  #       
-  #       f_minGain_all()
-  #       
-  #     } else {
-  #       
-  #       f_minGain_solo()
-  #     }
-  #   }
-  # })
-  
-  # maxGain <- reactive({
-  #   
-  #   if(values$geo_level == 'county'){
-  #     
-  #     if(input$selected_cfilter == 'All'){
-  #       
-  #       f_maxGain_all()
-  #       
-  #     } else {
-  #       
-  #       f_maxGain_solo()
-  #       
-  #     }
-  #   } else if (values$geo_level == 'tract'){
-  #     
-  #     if(input$selected_tfilter == 'All'){
-  #       
-  #       f_maxGain_all()
-  #       
-  #     } else {
-  #       
-  #       f_maxGain_solo()
-  #       
-  #     }
-  #     
-  #   } else if (values$geo_level == 'block group'){
-  #     
-  #     if(input$selected_bgfilter == 'All'){
-  #       
-  #       f_maxGain_all()
-  #       
-  #     } else {
-  #       
-  #       f_maxGain_solo()
-  #     }
-  #   }
-  # })
-  
+
   f_averageValue_all <- reactive({
-    
+
     req(input$selected_cfilter)
-    
+
     plot_data() %>%
+      subset((!is.na(plot_data()[,5])))%>%
       ungroup()%>%
       summarise(avgVal = mean(get(input$select_attr)))%>%
       select(avgVal) -> av
-    
+
     round(av,3)
-    
+
   })
-  
+
   f_averageValue_solo <- reactive({
-    
+
     req(input$selected_cfilter)
-    
+
     plot_data() %>%
+      subset((!is.na(plot_data()[,5])))%>%
       group_by(NAME) %>%
       summarise(avgVal = mean(get(input$select_attr)))%>%
       select(avgVal) -> av
-    
+
     round(av,3)
-    
+
   })
-  
-  # averageValue <- reactive({
-  # 
-  #   if(values$geo_level == 'county'){
-  # 
-  #     if(input$selected_cfilter == 'All'){
-  # 
-  #       f_averageValue_all()
-  # 
-  #     } else {
-  # 
-  #       f_averageValue_solo()
-  # 
-  #     }
-  #   } else if (values$geo_level == 'tract'){
-  # 
-  #     if(input$selected_tfilter == 'All'){
-  # 
-  #       f_averageValue_all()
-  # 
-  #     } else {
-  # 
-  #       f_averageValue_solo()
-  # 
-  #     }
-  # 
-  #   } else if (values$geo_level == 'block group'){
-  # 
-  #     if(input$selected_bgfilter == 'All'){
-  # 
-  #       f_averageValue_all()
-  # 
-  #     } else {
-  # 
-  #       f_averageValue_solo()
-  #     }
-  #   }
-  # })
-  
-  
-  
+
+  # Value Box Values -----
   valueBoxVal <- reactiveValues()
 
-  observe({
+  observeEvent(c(input$select_attr,input$selected_cfilter,input$selected_tfilter,input$selected_bgfilter),{
+    
+    req(input$select_attr)
 
     if(values$geo_level == 'county'){
-      
+
       req(input$selected_cfilter)
 
       if(input$selected_cfilter == 'All'){
@@ -1066,9 +870,9 @@ server <-  function(input, output, session){
         valueBoxVal$averageValue <- f_averageValue_solo()
 
       }
-      
+
     } else if (values$geo_level == 'tract'){
-      
+
       req(input$selected_tfilter)
 
       if(input$selected_tfilter == 'All'){
@@ -1090,7 +894,7 @@ server <-  function(input, output, session){
       }
 
     } else if (values$geo_level == 'block group'){
-      
+
       req(input$selected_bgfilter)
 
       if(input$selected_bgfilter == 'All'){
@@ -1110,91 +914,90 @@ server <-  function(input, output, session){
         valueBoxVal$averageValue <- f_averageValue_solo()
       }
     }
-})
-  
+  })
+
   total_change <- reactive({
-    
+
     round((valueBoxVal$vf-valueBoxVal$vi),3)
-    
+
   })
-  
+
   perc_change <- reactive({
-    
+
     round(((valueBoxVal$vf-valueBoxVal$vi)/abs(valueBoxVal$vi)*100),3)
-    
+
   })
-  
+
   roc <- reactive({
-    
+
     round(total_change()/5,3)
-    
+
   })
-  
-  # Value Boxes -----
-  
+
+  # Value Boxes Output -----
+
   output$vbText <- renderText({
-    
+
     req(input$selected_cfilter)
-    
+
     'Regional Period Statistics'
-    
+
   })
-  
+
   output$totalChangeBox <- renderValueBox({
-    
+
     req(input$selected_cfilter)
-    
+
     valueBox(
       total_change(), "Total Change (2011-2016)", icon = icon("list"),
       color = "blue", width = 3
     )
   })
-  
+
   output$percChangeBox <- renderValueBox({
-    
+
     req(input$selected_cfilter)
-    
+
     valueBox(
       paste(perc_change(),'%',sep=''), "Percent Change (2011-2016)", icon = icon("list"),
       color = "green", width = 3
     )
   })
-  
+
   output$roChangeBox <- renderValueBox({
-    
+
     req(input$selected_cfilter)
-    
+
     valueBox(
       roc(), "Rate of Change (2011-2016)", icon = icon("list"),
       color = "purple", width = 3
     )
   })
-  
+
   output$minGainBox <- renderValueBox({
-    
+
     req(input$selected_cfilter)
-    
+
     valueBox(
       valueBoxVal$minGain, "Minimum Gain (2011-2016)", icon = icon("list"),
       color = "blue", width = 3
     )
   })
-  
-  
+
   output$maxGainBox <- renderValueBox({
-    
+
     req(input$selected_cfilter)
-    
+
     valueBox(
       valueBoxVal$maxGain, "Max Gain (2011-2016)", icon = icon("list"),
       color = "green", width = 3
     )
   })
-  
+
   output$averageBox <- renderValueBox({
-    
+
     req(input$selected_cfilter)
-    
+
     valueBox(
       valueBoxVal$averageValue, "Average Value (2011-2016)", icon = icon("list"),
       color = "purple", width = 3
@@ -1212,15 +1015,6 @@ server <-  function(input, output, session){
     }
   )
 
-  # output$download_dt <- renderUI({
-  # 
-  #   req(input$select_var)
-  # 
-  #   fluidRow(
-  # 
-  #     column(10),downloadButton("downloadData", "Download Spreadsheet"))
-  # })
-  
   output$download_dt <- renderUI({
     
     req(input$select_var)
@@ -1236,8 +1030,8 @@ server <-  function(input, output, session){
 
   plot_data <- reactive({
 
-    # req(county_names())
-    req(input$select_attr)
+    # req(input$select_attr)
+    req(table_data())
 
     # User selects County
 
@@ -1314,8 +1108,6 @@ server <-  function(input, output, session){
       }
 
     }
-
-
   })
 
   # Plot Event Data -----
@@ -1338,14 +1130,6 @@ server <-  function(input, output, session){
     
     req(select_event())
 
-    # ed <- event_data("plotly_click", source = "select")
-    
-    # ed[5]
-    
-    # row.names(plot_data())
-    
-    # row.names(plot_data()) == as.character(ed[5])
-    
     plot_data()$NAME[row.names(plot_data()) == as.character(select_event()[5])]
 
     })
@@ -1547,14 +1331,27 @@ server <-  function(input, output, session){
   output$p_title <- renderText({
     
     if(is.null(input$selected_cfilter)){}
-    
-    else{
-    
-    req(input$selected_cfilter)
-    
-    plot_title()}
-    
-    })
+
+    else if (values$geo_level == 'county'){
+
+      req(input$selected_cfilter)
+  
+      plot_title()
+
+    } else if (values$geo_level == 'tract'){
+      
+      req(input$selected_tfilter)
+      
+      plot_title()
+      
+    } else if (values$geo_level == 'block group'){
+      
+      req(input$selected_bgfilter)
+      
+      plot_title()
+      
+    }
+  })
   
   # Plots -----
 
@@ -1631,15 +1428,14 @@ server <-  function(input, output, session){
           )
       
     }
-
   })
 
 # Test / Trouble shooting
-output$test <- renderPrint({
-  
-  f_averageValue_solo()
-
-})
+# output$test <- renderPrint({
+#   
+#   f_vi_all()
+#   
+# })
 
 }
 
