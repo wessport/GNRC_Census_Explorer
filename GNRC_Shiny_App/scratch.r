@@ -521,3 +521,42 @@ subset(h, (!is.na(h[,5])))
 j <- subset(h, (!is.na(h[,5])))
 
 min(j$Vintage)
+
+# Bivariate map
+
+state = 'TN'
+counties <- c('Cheatham','Davidson','Dickson','Houston','Humphreys','Montgomery','Maury','Robertson','Rutherford','Stewart','Sumner',
+              'Trousdale','Williamson','Wilson')
+geography <- 'tract'
+tableID <- 'B25056'
+year <- 2016
+
+test <- get_acs(geography, table = tableID, year = year, state = state, county = counties, geometry =  TRUE)
+
+test %>% filter(variable == 'B25056_001') -> test2
+
+library(ggplot2)
+library(multiscales)
+library(colorspace)
+
+ggplot(test2, aes(fill = zip(estimate, moe/estimate))) +
+  geom_sf(color = "gray30", size = 0.2) +
+  # coord_sf(xlim = c(-88, -79.8), ylim = c(24.1, 31.2), datum = NA) +
+  bivariate_scale("fill",
+                  pal_vsup_viridis(),
+                  name = c("median house\nvalues ($1K)", "uncertainty"),
+                  # limits = list(c(0, 400), c(0, 0.4)),
+                  limits = list(c(0, 2000), c(0, 1)),
+                  # breaks = list(waiver(), c(0.05, 0.15, 0.25, 0.35)),
+                  breaks = list(waiver(), waiver()),
+                  # labels = list(waiver(), scales::percent),
+                  labels = list(waiver(), scales::percent),
+                  guide = "colourfan"
+  ) +
+  theme_void() +
+  theme(
+    legend.key.size = grid::unit(0.8, "cm"),
+    legend.title.align = 0.5,
+    legend.justification = c(0, 0),
+    legend.position = c(0.1, 0.1)
+  )

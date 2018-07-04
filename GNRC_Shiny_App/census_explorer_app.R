@@ -28,6 +28,10 @@ library(sf)
 library(tidyverse)
 library(viridis)
 
+# library(ggplot2)
+# library(multiscales)
+# library(colorspace)
+
 #Global -----
 
 # Import data
@@ -52,12 +56,12 @@ ui <- dashboardPage(
   # UI Sidebar ----
   dashboardSidebar(
     width = 350,
-    sidebarMenu(
-      
+    sidebarMenu(style = "position: fixed; overflow: visible;",
+  
       menuItem("Map & Plot",tabName = "map", icon = icon("map")),
       selectInput(
         "select_category",
-        label = h3("Topic:"),
+        label = h4("Topic:"),
         c("Please select an option below" = "",
           "Population" = "Pop",
           "Transportation" = "Tran",
@@ -75,7 +79,14 @@ ui <- dashboardPage(
         
       menuItem("Data Table", tabName = "dt", icon = icon("th")),
       
-      uiOutput("download_dt")
+      br(),
+      
+      uiOutput("download_dt"),
+      # tags$head(tags$style(".butt{background-color:#FFFFFF;} .sidebar .butt{color: #000000;}")) # background color and font color
+      # tags$head(tags$style(".skin-blue .sidebar a { color: #444; }"))
+      tags$head(tags$style(".skin-blue a#downloadData.btn.btn-default.shiny-download-link.butt.shiny-bound-output { color: #444; }"))
+      
+      # menuItem("Bivariate Map", tabName = "bmap", icon = icon("map"))
       
     )
     
@@ -85,10 +96,13 @@ ui <- dashboardPage(
   # UI Body ----
   dashboardBody(
     
-    tags$head(
-      tags$style(HTML("li { font-size: 20px; }")) #change the font size to 20
-      ),
+    tags$head( 
+      tags$style(HTML(".main-sidebar { font-size: 14px; }")) #change the font size to 14
+    ),
     
+    tags$head(
+      tags$style(HTML("li { font-size: 24px; }")) #change the font size to 20
+      ),
     
     
     tabItems(
@@ -125,16 +139,15 @@ ui <- dashboardPage(
               column(2, offset = 1, uiOutput("plot_filter_bg"))
             ),
           
-          # fluidRow(column(12,h2("Regional Period Statistics"))),
           fluidRow(column(12,h2(htmlOutput('vbText')))),
           
           fluidRow(
             valueBoxOutput("totalChangeBox"),
-            valueBoxOutput("percChangeBox"),
+            valueBoxOutput("minGainBox"),
             valueBoxOutput("roChangeBox")
             ),
           fluidRow(
-            valueBoxOutput("minGainBox"),
+            valueBoxOutput("percChangeBox"),
             valueBoxOutput("maxGainBox"),
             valueBoxOutput("averageBox")
           ),
@@ -147,8 +160,15 @@ ui <- dashboardPage(
       
       tabItem(tabName = "dt",
               box(
-              uiOutput("dt"),status = 'warning', width = 12)
+                uiOutput("dt"),status = 'warning', width = 12)
       )
+      
+      # tabItem(tabName = 'bmap',
+      #         box(
+      #           uiOutput('bivariateSelection'),
+      #           plotlyOutput("bmap") %>% withSpinner(type = getOption("spinner.type", default = 5))
+      #         )
+      # )
     )
   )
 )
@@ -167,7 +187,7 @@ server <-  function(input, output, session){
     if (input$select_category == 'Pop') {
       selectInput(
         "select_var",
-        label = h3("Category:"),
+        label = h4("Category:"),
         c(
           "Please select an option below" = "",
           'Detailed Race',
@@ -186,7 +206,7 @@ server <-  function(input, output, session){
     else if (input$select_category == 'Tran') {
       selectInput(
         "select_var",
-        label = h3("Category:"),
+        label = h4("Category:"),
         c(
           "Please select an option below" = "",
           'Means of transportation to work',
@@ -215,7 +235,7 @@ server <-  function(input, output, session){
     else if (input$select_category == 'Housing') {
       selectInput(
         "select_var",
-        label = h3("Category:"),
+        label = h4("Category:"),
         c(
           "Please select an option below" = "",
           'Contract Rent',
@@ -249,7 +269,7 @@ server <-  function(input, output, session){
     else if (input$select_category == 'Health') {
       selectInput(
         "select_var",
-        label = h3("Category:"),
+        label = h4("Category:"),
         c("Please select an option below" = "", 
           'Health insurance coverage status by sex by age',
           'Medicare coverage by sex by age',
@@ -260,7 +280,7 @@ server <-  function(input, output, session){
     else if (input$select_category == 'Emp') {
       selectInput(
         "select_var",
-        label = h3("Category:"),
+        label = h4("Category:"),
         c(
           "Please select an option below" = "",
           'Employment status for the population 16 years and over',
@@ -287,7 +307,7 @@ server <-  function(input, output, session){
     
     selectInput(
       "select_attr",
-      label = h3("Variable:"),
+      label = h4("Variable:"),
       c("Please select an option below" = "", attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")])
     )
   })
@@ -300,7 +320,7 @@ server <-  function(input, output, session){
     
       selectInput(
         "select_geo",
-        label = h3("Geographic Division:"),
+        label = h4("Geographic Division:"),
         c("Please select an option below" = "", "Automatic by Zoom Level","County","Tract","Block Group")
       )
 
@@ -690,9 +710,9 @@ server <-  function(input, output, session){
     else {
      
       tabBox(
-           tabPanel(HTML(paste(icon('th-list'),"County",sep=' ')),DT::dataTableOutput("dt_county")),
-           tabPanel(HTML(paste(icon('th-list'),"Tract",sep=' ')), DT::dataTableOutput("dt_tract")),
-           tabPanel(HTML(paste(icon('th-list'),"Block Group",sep=' ')), DT::dataTableOutput("dt_bg")),
+           tabPanel(HTML(paste(icon('th'),"County",sep=' ')),DT::dataTableOutput("dt_county")),
+           tabPanel(HTML(paste(icon('th'),"Tract",sep=' ')), DT::dataTableOutput("dt_tract")),
+           tabPanel(HTML(paste(icon('th'),"Block Group",sep=' ')), DT::dataTableOutput("dt_bg")),
            width=12
      )
     }
@@ -949,7 +969,7 @@ server <-  function(input, output, session){
 
     req(input$selected_cfilter)
 
-    'Regional Period Statistics'
+    paste0(icon("stats", lib = "glyphicon"),' Regional Period Statistics')
 
   })
 
@@ -958,7 +978,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      total_change(), "Total Change (2011-2016)", icon = icon("list"),
+      total_change(), "Total Change (2011-2016)", icon = icon("signal"),
       color = "blue", width = 3
     )
   })
@@ -968,8 +988,8 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      paste(perc_change(),'%',sep=''), "Percent Change (2011-2016)", icon = icon("list"),
-      color = "green", width = 3
+      paste(perc_change(),'%',sep=''), "Percent Change (2011-2016)", icon = icon("percent"),
+      color = "blue", width = 3
     )
   })
 
@@ -978,7 +998,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      roc(), "Rate of Change (2011-2016)", icon = icon("list"),
+      roc(), "Rate of Change (2011-2016)", icon = icon("hourglass-half",lib = "font-awesome"),
       color = "purple", width = 3
     )
   })
@@ -988,8 +1008,8 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      valueBoxVal$minGain, "Minimum Gain (2011-2016)", icon = icon("list"),
-      color = "blue", width = 3
+      valueBoxVal$minGain, "Minimum Gain (2011-2016)", icon = icon("angle-up", lib = "font-awesome"),
+      color = "green", width = 3
     )
   })
 
@@ -998,7 +1018,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      valueBoxVal$maxGain, "Max Gain (2011-2016)", icon = icon("list"),
+      valueBoxVal$maxGain, "Max Gain (2011-2016)", icon = icon("angle-double-up", lib = "font-awesome"),
       color = "green", width = 3
     )
   })
@@ -1008,7 +1028,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      valueBoxVal$averageValue, "Average Value (2011-2016)", icon = icon("list"),
+      valueBoxVal$averageValue, "Average Value (2011-2016)", icon = icon("equalizer",lib = "glyphicon"),
       color = "purple", width = 3
     )
   })
@@ -1030,7 +1050,7 @@ server <-  function(input, output, session){
     
     fluidRow(
       
-      column(1),downloadButton("downloadData", "Download Spreadsheet"))
+      column(1),downloadButton("downloadData", "Download Spreadsheet", class = 'butt'))
   })
 
 
@@ -1481,12 +1501,68 @@ server <-  function(input, output, session){
     }
     
   })
+  
+  # # Bivariate Map -----
+  # 
+  # output$bivariateSelection <- renderUI({ 
+  #   
+  #   req(input$select_var)
+  #   
+  #   attr <- colnames(selected_data())
+  #   
+  #   selectInput(
+  #     "select_attr_2",
+  #     label = h4("Variable:"),
+  #     c(attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")])
+  #   )
+  # })
+  # 
+  # output$bmap <-  renderPlotly({
+  #   
+  #   if(values$geo_level == 'county'){req(!is.null(input$selected_cfilter))}
+  #   if(values$geo_level == 'tract'){req(!is.null(input$selected_tfilter))}
+  #   if(values$geo_level == 'block group'){req(!is.null(input$selected_bgfilter))}
+  #   else{req(input$select_attr)}
+  #   
+  #   a <- split(filtered_data()[input$select_attr]%>%st_set_geometry(NULL), seq(filtered_data()[input$select_attr]%>%st_set_geometry(NULL)))
+  # 
+  #   b <- split(filtered_data()[input$select_attr_2]%>%st_set_geometry(NULL), seq(filtered_data()[input$select_attr_2]%>%st_set_geometry(NULL)))
+  #   
+  #   g <- ggplot(filtered_data(), aes(fill = zip(a, b))) +
+  #     geom_sf(color = "gray30", size = 0.2) +
+  #     # coord_sf(xlim = c(-88, -79.8), ylim = c(24.1, 31.2), datum = NA) +
+  #     bivariate_scale("fill",
+  #                     pal_vsup_viridis(),
+  #                     name = c("median house\nvalues ($1K)", "uncertainty"),
+  #                     # limits = list(c(0, 400), c(0, 0.4)),
+  #                     limits = list(c(0, 2000), c(0, 1)),
+  #                     # breaks = list(waiver(), c(0.05, 0.15, 0.25, 0.35)),
+  #                     breaks = list(waiver(), waiver()),
+  #                     # labels = list(waiver(), scales::percent),
+  #                     labels = list(waiver(), scales::percent),
+  #                     guide = "colourfan"
+  #     ) +
+  #     theme_void() +
+  #     theme(
+  #       legend.key.size = grid::unit(0.8, "cm"),
+  #       legend.title.align = 0.5,
+  #       legend.justification = c(0, 0),
+  #       legend.position = c(0.1, 0.1)
+  #     )
+  #   
+  #   ggplotly(g)
+  #   
+  # })
+  
+  
 
 # Test / Trouble shooting
 # output$test <- renderPrint({
 #   
-#   f_vi_all()
+#   split(filtered_data()[input$select_attr]%>%st_set_geometry(NULL), seq(filtered_data()[input$select_attr]%>%st_set_geometry(NULL)))
 #   
+#   # as.list(filtered_data()[input$select_attr]%>%st_set_geometry(NULL))
+# 
 # })
 
 }
