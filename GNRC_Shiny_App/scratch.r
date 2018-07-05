@@ -560,3 +560,9 @@ ggplot(test2, aes(fill = zip(estimate, moe/estimate))) +
     legend.justification = c(0, 0),
     legend.position = c(0.1, 0.1)
   )
+
+
+# Normalize
+
+colnames(total_pop)[5] <- 'total_est'
+colnames(total_pop)

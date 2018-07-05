@@ -37,6 +37,8 @@ library(viridis)
 # Import data
 places <- readRDS("./data/places.rds")
 geom <- readRDS("./data/geometry.rds")
+total_pop <- readRDS("./data/Total Population.rds")
+colnames(total_pop)[5] <- 'total_est'
 
 # # Display tab content in dashboardBody()with menuItem
 # convertMenuItem <- function(mi,tabName) {
@@ -56,7 +58,9 @@ ui <- dashboardPage(
   # UI Sidebar ----
   dashboardSidebar(
     width = 350,
-    sidebarMenu(style = "position: fixed; overflow: visible;",
+    sidebarMenu(
+      
+      # style = "position: fixed; overflow: visible; overflow-y: scroll",
   
       menuItem("Map & Plot",tabName = "map", icon = icon("map")),
       selectInput(
@@ -82,8 +86,7 @@ ui <- dashboardPage(
       br(),
       
       uiOutput("download_dt"),
-      # tags$head(tags$style(".butt{background-color:#FFFFFF;} .sidebar .butt{color: #000000;}")) # background color and font color
-      # tags$head(tags$style(".skin-blue .sidebar a { color: #444; }"))
+
       tags$head(tags$style(".skin-blue a#downloadData.btn.btn-default.shiny-download-link.butt.shiny-bound-output { color: #444; }"))
       
       # menuItem("Bivariate Map", tabName = "bmap", icon = icon("map"))
@@ -103,7 +106,6 @@ ui <- dashboardPage(
     tags$head(
       tags$style(HTML("li { font-size: 24px; }")) #change the font size to 20
       ),
-    
     
     tabItems(
     
@@ -434,6 +436,32 @@ server <-  function(input, output, session){
       hideGroup('Places')
   })
   
+  # Total Pop
+  
+  tp <- reactive({
+    
+    req(selected_data())
+    
+    if (is.null(input$yr)) {
+      y <- 2016
+    }
+    else {
+      y <- input$yr
+    }
+    
+    if(is.null(values$geo_level)){
+      
+      total_pop %>%
+        filter(Vintage == y & Level == 'county')
+      
+    } else {
+      
+      total_pop %>%
+        filter(Vintage == y & Level == values$geo_level)
+    }
+    
+  })
+  
   # Map - Fill Color -----
   fc <- reactive({
 
@@ -452,8 +480,11 @@ server <-  function(input, output, session){
     
     else {
 
-      tryCatch(colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]),
-               error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
+      # tryCatch(colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]),
+      #          error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
+      
+      tryCatch(colorQuantile("YlOrRd", (filtered_data()[[input$select_attr]])/tp()$total_est)((filtered_data()[[input$select_attr]])/tp()$total_est),
+               error=function(e) colorBin("YlOrRd", (filtered_data()[[input$select_attr]])/tp()$total_est)((filtered_data()[[input$select_attr]])/tp()$total_est))
     }
 
   })
@@ -478,10 +509,17 @@ server <-  function(input, output, session){
         st_set_geometry(NULL) %>%
         pull("NAME") -> labels
 
+      # filtered_data() %>%
+      #   st_set_geometry(NULL) %>%
+      #   ungroup() %>%
+      #   pull(input$select_attr) %>%
+      #   round(digits = 3) -> map_var
+      
       filtered_data() %>%
         st_set_geometry(NULL) %>%
         ungroup() %>%
-        pull(input$select_attr) %>%
+        mutate(mpv = (get(input$select_attr))/(tp()$total_est)*100)%>%
+        pull(mpv) %>%
         round(digits = 3) -> map_var
 
       paste("<strong>",labels,"</strong><br>",input$select_attr,": ",map_var,sep = '')
@@ -591,11 +629,13 @@ server <-  function(input, output, session){
 
     if(q_length>unique_q_length){
 
-      colorBin("YlOrRd", filtered_data()[[input$select_attr]])
+      # colorBin("YlOrRd", filtered_data()[[input$select_attr]])
+      colorBin("YlOrRd", ((filtered_data()[[input$select_attr]])/tp()$total_est)*100)
 
     } else{
 
-      colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])
+      # colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])
+      colorQuantile("YlOrRd", ((filtered_data()[[input$select_attr]])/tp()$total_est)*100)
     }
 
   })
@@ -615,13 +655,16 @@ server <-  function(input, output, session){
     } else {
 
       req(fc())
+      
+      vals <- round(((filtered_data()[[input$select_attr]])/tp()$total_est)*100,3)
 
       leafletProxy("mymap", data = filtered_data()) %>%
         clearControls() %>%
         addLegend("bottomright",
                   pal = pal(),
-                  values = ~get(input$select_attr),
-                  title = "Count",
+                  # values = ~get(input$select_attr),
+                  values = vals,
+                  title = "Count/Total Pop.",
                   opacity = 0.5,
                   labFormat = function(type, cuts, p) {
                     n = length(cuts)
@@ -1558,10 +1601,13 @@ server <-  function(input, output, session){
 
 # Test / Trouble shooting
 # output$test <- renderPrint({
-#   
-#   split(filtered_data()[input$select_attr]%>%st_set_geometry(NULL), seq(filtered_data()[input$select_attr]%>%st_set_geometry(NULL)))
-#   
-#   # as.list(filtered_data()[input$select_attr]%>%st_set_geometry(NULL))
+# 
+#   filtered_data() %>%
+#     st_set_geometry(NULL) %>%
+#     ungroup() %>%
+#     # mutate(mpv = get(input$select_attr))%>%
+#     mutate(mpv = (get(input$select_attr))/(tp()$total_est))%>%
+#     select(mpv)
 # 
 # })
 
