@@ -566,3 +566,8 @@ ggplot(test2, aes(fill = zip(estimate, moe/estimate))) +
 
 colnames(total_pop)[5] <- 'total_est'
 colnames(total_pop)
+
+
+colorBin("Blues",c(0.0,10.123,NaN))
+
+colorQuantile("Blues",c(0,10))

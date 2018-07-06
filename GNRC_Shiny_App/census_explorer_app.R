@@ -24,6 +24,7 @@ library(rgdal)
 library(shiny)
 library(shinydashboard)
 library(shinycssloaders)
+library(shinyjs)
 library(sf)
 library(tidyverse)
 library(viridis)
@@ -98,6 +99,7 @@ ui <- dashboardPage(
   
   # UI Body ----
   dashboardBody(
+    useShinyjs(),
     
     tags$head( 
       tags$style(HTML(".main-sidebar { font-size: 14px; }")) #change the font size to 14
@@ -153,9 +155,9 @@ ui <- dashboardPage(
             valueBoxOutput("maxGainBox"),
             valueBoxOutput("averageBox")
           ),
-          status = 'success', width = 12))
+          status = 'success', width = 12)),
         
-          # verbatimTextOutput("test")
+          verbatimTextOutput("test")
         
         
       ),
@@ -440,7 +442,52 @@ server <-  function(input, output, session){
   
   tp <- reactive({
     
+    if(is.null(values$geo_level)){
+      
+      total_pop %>%
+        filter(Level == 'county')
+      
+    } else {
+      
+      total_pop %>%
+        filter(Level == values$geo_level)
+    }
+    
+  })
+  
+  f_data <- reactive({
+    
     req(selected_data())
+    
+    if(is.null(values$geo_level)){
+      
+      selected_data() %>%
+        filter(Level == 'county')
+      
+    } else {
+      
+      selected_data() %>%
+        filter(Level == values$geo_level)
+    }
+  })
+  
+  perc_pop <- reactive({
+  
+    req(input$select_attr)
+    
+    delay(1,
+    
+      f_data() %>%
+        st_set_geometry(NULL) %>%
+        ungroup() %>%
+        mutate(pp = (get(input$select_attr))/(tp()$total_est)*100)
+    )
+
+  })
+  
+  pp_f <- reactive({
+    
+    req(perc_pop())
     
     if (is.null(input$yr)) {
       y <- 2016
@@ -449,43 +496,70 @@ server <-  function(input, output, session){
       y <- input$yr
     }
     
-    if(is.null(values$geo_level)){
-      
-      total_pop %>%
-        filter(Vintage == y & Level == 'county')
-      
-    } else {
-      
-      total_pop %>%
-        filter(Vintage == y & Level == values$geo_level)
-    }
+    perc_pop()%>%
+      filter(Vintage == y & Level == values$geo_level)%>%
+      pull(pp)
+    
+  })
+  
+  min_pp <- reactive({
+    
+    req(perc_pop())
+    
+    perc_pop()%>%
+      subset(!is.na(perc_pop()$pp))%>%
+      summarise(minpp = min(pp))%>%
+      pull(minpp)
+  })
+  
+  max_pp <- reactive({
+    
+    req(perc_pop())
+    
+    perc_pop()%>%
+      subset(!is.na(perc_pop()$pp))%>%
+      summarise(maxpp = max(pp))%>%
+      pull(maxpp)
+  })
+  
+  bounds <- reactive({
+    
+    req(min_pp(),max_pp())
+    
+    c(min_pp(),max_pp())
     
   })
   
   # Map - Fill Color -----
   fc <- reactive({
-
-    req(input$select_attr)
-
-    if(is.null(input$select_attr)){
-
-      fc <- 'grey'
-    }
-
-    else if(input$select_attr==''){
-
-      'grey'
-
-    } 
     
-    else {
+    req(pp_f())
+    
+    colorBin("YlOrRd", bounds())(pp_f())
+
+    # if(is.null(input$select_attr)){
+    # 
+    #   fc <- 'grey'
+    # }
+    # 
+    # else if(input$select_attr==''){
+    # 
+    #   'grey'
+    # 
+    # } 
+    # 
+    # else {
 
       # tryCatch(colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]),
       #          error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
       
-      tryCatch(colorQuantile("YlOrRd", (filtered_data()[[input$select_attr]])/tp()$total_est)((filtered_data()[[input$select_attr]])/tp()$total_est),
-               error=function(e) colorBin("YlOrRd", (filtered_data()[[input$select_attr]])/tp()$total_est)((filtered_data()[[input$select_attr]])/tp()$total_est))
-    }
+      # tryCatch(colorQuantile("YlOrRd", (filtered_data()[[input$select_attr]])/tp()$total_est)((filtered_data()[[input$select_attr]])/tp()$total_est),
+      #          error=function(e) colorBin("YlOrRd", (filtered_data()[[input$select_attr]])/tp()$total_est)((filtered_data()[[input$select_attr]])/tp()$total_est))
+      
+      # tryCatch(colorQuantile("YlOrRd", c(min_pp(),max_pp()))*c(min_pp(),max_pp()),
+      #          error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
+      
+    # }
 
   })
   
@@ -515,14 +589,7 @@ server <-  function(input, output, session){
       #   pull(input$select_attr) %>%
       #   round(digits = 3) -> map_var
       
-      filtered_data() %>%
-        st_set_geometry(NULL) %>%
-        ungroup() %>%
-        mutate(mpv = (get(input$select_attr))/(tp()$total_est)*100)%>%
-        pull(mpv) %>%
-        round(digits = 3) -> map_var
-
-      paste("<strong>",labels,"</strong><br>",input$select_attr,": ",map_var,sep = '')
+      paste("<strong>",labels,"</strong><br>",input$select_attr,": ",round(pp_f(),2),'%',sep = '')
 
       }
 
@@ -541,8 +608,6 @@ server <-  function(input, output, session){
   })
   
   observe({
-
-    # req(fc())
 
     leafletProxy("mymap", data = filtered_data()) %>%
       clearShapes() %>%
@@ -603,7 +668,6 @@ server <-  function(input, output, session){
     
     label <- paste("<strong>",selected_boundary(),"</strong><br>",input$select_attr,": ",map_var,sep = '')
     
-
     leafletProxy("mymap", data = sd) %>%
       clearGroup('Selected') %>%
       addPolygons(
@@ -622,6 +686,8 @@ server <-  function(input, output, session){
   # Map Legend -----
 
   pal <- reactive({
+    
+    req(pp_f())
 
     q_length <- length(quantile(filtered_data()[[input$select_attr]],na.rm=TRUE))
 
@@ -630,12 +696,13 @@ server <-  function(input, output, session){
     if(q_length>unique_q_length){
 
       # colorBin("YlOrRd", filtered_data()[[input$select_attr]])
-      colorBin("YlOrRd", ((filtered_data()[[input$select_attr]])/tp()$total_est)*100)
+      colorBin("YlOrRd", bounds())
 
     } else{
 
       # colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])
-      colorQuantile("YlOrRd", ((filtered_data()[[input$select_attr]])/tp()$total_est)*100)
+      # colorQuantile("YlOrRd",  bounds()(pp_f()))
+      colorBin("YlOrRd", bounds())
     }
 
   })
@@ -654,16 +721,17 @@ server <-  function(input, output, session){
 
     } else {
 
-      req(fc())
+      # req(fc())
+      req(pal())
       
-      vals <- round(((filtered_data()[[input$select_attr]])/tp()$total_est)*100,3)
+      # vals <- round(((filtered_data()[[input$select_attr]])/tp()$total_est)*100,3)
 
       leafletProxy("mymap", data = filtered_data()) %>%
         clearControls() %>%
         addLegend("bottomright",
                   pal = pal(),
                   # values = ~get(input$select_attr),
-                  values = vals,
+                  values = round(pp_f(),2),
                   title = "Count/Total Pop.",
                   opacity = 0.5,
                   labFormat = function(type, cuts, p) {
@@ -1598,18 +1666,12 @@ server <-  function(input, output, session){
   # })
   
   
-
 # Test / Trouble shooting
-# output$test <- renderPrint({
-# 
-#   filtered_data() %>%
-#     st_set_geometry(NULL) %>%
-#     ungroup() %>%
-#     # mutate(mpv = get(input$select_attr))%>%
-#     mutate(mpv = (get(input$select_attr))/(tp()$total_est))%>%
-#     select(mpv)
-# 
-# })
+output$test <- renderPrint({
+
+  input$select_attr
+
+})
 
 }
 
