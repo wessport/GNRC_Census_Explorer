@@ -300,12 +300,33 @@ server <-  function(input, output, session){
     
   })
   
-
+  # Reset input$select_attr when user changes data topic
+  
+  observeEvent(input$select_category, priority = 1,{
+    
+    updateSelectInput(session, "select_attr", selected = '')
+    
+  })
+  
+  # Reset input$select_attr when user changes data category
+  
+  observeEvent(selected_data(), {
+    reset_sel_attr()
+  }, priority = 10)
+  
+  # Reset input$select_attr utilizing freezeReactiveValue
+  # Based on solution by Joe Cheng [RStudio]
+  # https://groups.google.com/forum/#!msg/shiny-discuss/gkeuyPAZndM/QYvgI0WbFAAJ
+  reset_sel_attr <- function() {
+    updateSelectInput(session, "select_attr", selected = '')
+    freezeReactiveValue(input, "select_attr")
+  }
+  
   # Render Select Variable
   
   output$thirdSelection <- renderUI({ 
     
-    req(input$select_var)
+    req(selected_data())
     
     attr <- colnames(selected_data())
     
@@ -395,23 +416,30 @@ server <-  function(input, output, session){
   filtered_data <- reactive({
     
     req(selected_data())
-
-    if (is.null(input$yr)) {
-      y <- 2016
-    }
-    else {
-      y <- input$yr
-    }
     
-    if(is.null(values$geo_level)){
+    if(is.null(input$select_attr)){}
+    
+    else if(input$select_attr == ''){}
+    
+    else{
       
-      selected_data() %>%
-        filter(Vintage == y & Level == 'county')
-    
-    } else {
-
-    selected_data() %>%
-      filter(Vintage == y & Level == values$geo_level)
+      if (is.null(input$yr)) {
+        y <- 2016
+      }
+      else {
+        y <- input$yr
+      }
+      
+      if(is.null(values$geo_level)){
+        
+        selected_data() %>%
+          filter(Vintage == y & Level == 'county')
+        
+      } else {
+        
+        selected_data() %>%
+          filter(Vintage == y & Level == values$geo_level)
+      }
     }
   })
   
@@ -472,22 +500,19 @@ server <-  function(input, output, session){
   })
   
   perc_pop <- reactive({
-  
+    
     req(input$select_attr)
     
-    delay(1,
+    f_data() %>%
+      st_set_geometry(NULL) %>%
+      ungroup() %>%
+      mutate(pp = (get(input$select_attr))/(tp()$total_est)*100)
     
-      f_data() %>%
-        st_set_geometry(NULL) %>%
-        ungroup() %>%
-        mutate(pp = (get(input$select_attr))/(tp()$total_est)*100)
-    )
-
   })
   
   pp_f <- reactive({
     
-    req(perc_pop())
+    req(perc_pop)
     
     if (is.null(input$yr)) {
       y <- 2016
@@ -524,7 +549,7 @@ server <-  function(input, output, session){
   
   bounds <- reactive({
     
-    req(min_pp(),max_pp())
+    req(max_pp())
     
     c(min_pp(),max_pp())
     
@@ -533,66 +558,35 @@ server <-  function(input, output, session){
   # Map - Fill Color -----
   fc <- reactive({
     
-    req(pp_f())
+    req(bounds())
     
     colorBin("YlOrRd", bounds())(pp_f())
-
-    # if(is.null(input$select_attr)){
-    # 
-    #   fc <- 'grey'
-    # }
-    # 
-    # else if(input$select_attr==''){
-    # 
-    #   'grey'
-    # 
-    # } 
-    # 
-    # else {
-
-      # tryCatch(colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]),
-      #          error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
-      
-      # tryCatch(colorQuantile("YlOrRd", (filtered_data()[[input$select_attr]])/tp()$total_est)((filtered_data()[[input$select_attr]])/tp()$total_est),
-      #          error=function(e) colorBin("YlOrRd", (filtered_data()[[input$select_attr]])/tp()$total_est)((filtered_data()[[input$select_attr]])/tp()$total_est))
-      
-      # tryCatch(colorQuantile("YlOrRd", c(min_pp(),max_pp()))*c(min_pp(),max_pp()),
-      #          error=function(e) colorBin("YlOrRd", filtered_data()[[input$select_attr]])(filtered_data()[[input$select_attr]]))
-      
-    # }
-
+    
   })
-  
   
   # Map - Labels -----
   label_txt <- reactive({
-
-    req(fc())
+    
+    req(filtered_data())
     
     if(is.null(input$select_attr)){
       
       paste("<strong>", 'Attr NULL', "</strong>", sep = '')
-    
+      
     } else if (input$select_attr ==''){
-        
+      
       paste("<strong>", 'Attr default', "</strong>", sep = '')
       
     } else {
-
+      
       filtered_data() %>%
         st_set_geometry(NULL) %>%
         pull("NAME") -> labels
-
-      # filtered_data() %>%
-      #   st_set_geometry(NULL) %>%
-      #   ungroup() %>%
-      #   pull(input$select_attr) %>%
-      #   round(digits = 3) -> map_var
       
       paste("<strong>",labels,"</strong><br>",input$select_attr,": ",round(pp_f(),2),'%',sep = '')
-
-      }
-
+      
+    }
+    
   })
   
   places_label_txt <- reactive({
@@ -607,7 +601,7 @@ server <-  function(input, output, session){
     
   })
   
-  observe({
+  observe(
 
     leafletProxy("mymap", data = filtered_data()) %>%
       clearShapes() %>%
@@ -627,9 +621,9 @@ server <-  function(input, output, session){
         baseGroups = c('Carto DB', 'OSM','Esri World Imagery'),
         overlayGroups = c('Places','Boundary'),
         options = layersControlOptions(collapsed = TRUE)
-        )      
-
-  })
+        ),
+    priority = -1000      
+  )
   
   observe({
     
@@ -1170,8 +1164,8 @@ server <-  function(input, output, session){
 
   plot_data <- reactive({
 
-    # req(input$select_attr)
-    req(table_data())
+    # req(table_data())
+    req(perc_pop())
 
     # User selects County
 
@@ -1179,22 +1173,23 @@ server <-  function(input, output, session){
 
       if(input$selected_cfilter ==''){
 
-      table_data() %>%
+      # table_data() %>%
+      perc_pop() %>%
         filter(Level == values$geo_level) %>%
         group_by(NAME)
 
       } else if(input$selected_cfilter =='All'){
 
-      table_data() %>%
-        filter(Level == values$geo_level) %>%
-        group_by(NAME)
+        perc_pop() %>%
+          filter(Level == values$geo_level) %>%
+          group_by(NAME)
 
       } else {
 
-        table_data() %>%
+        perc_pop() %>%
           filter(Level == values$geo_level & NAME == input$selected_cfilter) %>%
-          group_by(NAME)
-
+          ungroup()
+        
       }
 
     # User selects Tract
@@ -1202,19 +1197,19 @@ server <-  function(input, output, session){
     } else if (values$geo_level == 'tract'){
 
         if(input$selected_cfilter ==''){
-          table_data() %>%
+          perc_pop() %>%
             filter(Level == values$geo_level & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) %>%
             group_by(NAME)
 
         } else if(input$selected_cfilter !='' & (input$selected_tfilter == ''|input$selected_tfilter == 'All')){
 
-          table_data() %>%
+          perc_pop() %>%
             filter(Level == values$geo_level & grepl(input$selected_cfilter,NAME, fixed = TRUE)) %>%
             group_by(NAME)
 
        } else{
 
-          table_data() %>%
+         perc_pop() %>%
             filter(Level == values$geo_level & grepl(input$selected_tfilter,NAME, fixed = TRUE)) %>%
             group_by(NAME)
         }
@@ -1224,25 +1219,25 @@ server <-  function(input, output, session){
     } else if(values$geo_level == 'block group'){
 
       if(input$selected_cfilter =='' & input$selected_tfilter =='' & input$selected_bgfilter ==''){
-        table_data() %>%
+        perc_pop() %>%
           filter(Level == values$geo_level & grepl('Davidson County, Tennessee',NAME, fixed = TRUE)) %>%
           group_by(NAME)
 
       } else if (input$selected_cfilter !='' & (input$selected_tfilter =='' | input$selected_tfilter =='All') & (input$selected_bgfilter == ''|input$selected_bgfilter == 'All')){
 
-        table_data() %>%
+        perc_pop() %>%
           filter(Level == values$geo_level & grepl(input$selected_cfilter,NAME, fixed = TRUE)) %>%
           group_by(NAME)
 
       } else if(input$selected_cfilter !='' & input$selected_tfilter !='' & (input$selected_bgfilter == ''|input$selected_bgfilter == 'All')){
 
-        table_data() %>%
+        perc_pop() %>%
           filter(Level == values$geo_level & grepl(input$selected_tfilter,NAME, fixed = TRUE)) %>%
           group_by(NAME)
 
       } else{
 
-        table_data() %>%
+        perc_pop() %>%
           filter(Level == values$geo_level & grepl(input$selected_bgfilter,NAME, fixed = TRUE)) %>%
           group_by(NAME)
       }
@@ -1497,6 +1492,8 @@ server <-  function(input, output, session){
 
   output$plot1 <- renderPlotly({
     
+    req(perc_pop())
+    
     if(values$geo_level == 'county'){req(!is.null(input$selected_cfilter))}
     if(values$geo_level == 'tract'){req(!is.null(input$selected_tfilter))}
     if(values$geo_level == 'block group'){req(!is.null(input$selected_bgfilter))}
@@ -1507,12 +1504,13 @@ server <-  function(input, output, session){
     key <- row.names(plot_data())
 
     y <- list(
-      title = "Count")
+      title = "Percent of Total Pop.")
 
     plot_data() %>%
       plot_ly(
         x = ~ Vintage,
-        y = ~ get(input$select_attr),
+        # y = ~ get(input$select_attr),
+        y = ~ pp,
         key = ~key,
         color = ~ NAME,
         colors = viridis_pal(option = "D")(3),
@@ -1528,7 +1526,8 @@ server <-  function(input, output, session){
         p %>% 
           plotly::add_trace(p, 
                             x = ~ Vintage,
-                            y = fitted(lm(get(input$select_attr) ~ Vintage, plot_data())),
+                            # y = fitted(lm(get(input$select_attr) ~ Vintage, plot_data())),
+                            y = fitted(lm(pp ~ Vintage, plot_data())),
                             name = 'Trend line',
                             line = list(color = 'rgb(0, 0, 0)', width = 2, dash = 'dash')) -> p
         p
@@ -1595,19 +1594,19 @@ server <-  function(input, output, session){
       
       req(input$selected_cfilter)
       
-      checkboxInput("checkbox", label = "Add Regression Line", value = FALSE)
+      checkboxInput("checkbox", label = "Add Trend Line", value = FALSE)
       
     } else if (values$geo_level == 'tract'){
       
       req(input$selected_tfilter)
       
-      checkboxInput("checkbox", label = "Add Regression Line", value = FALSE)
+      checkboxInput("checkbox", label = "Add Trend Line", value = FALSE)
       
     } else if (values$geo_level == 'block group'){
       
       req(input$selected_bgfilter)
       
-      checkboxInput("checkbox", label = "Add Regression Line", value = FALSE)
+      checkboxInput("checkbox", label = "Add Trend Line", value = FALSE)
       
     }
     
@@ -1669,8 +1668,10 @@ server <-  function(input, output, session){
 # Test / Trouble shooting
 output$test <- renderPrint({
 
-  input$select_attr
-
+  perc_pop() %>%
+    group_by(NAME)%>%
+    filter(Level == values$geo_level & NAME == input$selected_cfilter)
+  
 })
 
 }

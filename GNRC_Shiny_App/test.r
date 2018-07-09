@@ -252,69 +252,37 @@ server <-  function(input, output, session){
   selected_data <-  reactive({
     
     req(input$select_var)
-    
-    # # Read in requested tabular census data
-    # tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
-    # 
-    # # Join tabular data with spatial geometry
-    # tabular_data %>%
-    #   left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
-    # 
-    # # Define Coordinate Reference System: EPSG: 4326
-    # # Transfrom joined object into a simple feature spatial object
-    # st_transform(st_as_sf(t), 4326, use_gdal = T)
-    
-    if(is.null(input$select_var)){}
-    
-    else if(input$select_var == ''){
 
-      # # Read in requested tabular census data
-      # tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
-      # 
-      # # Join tabular data with spatial geometry
-      # tabular_data %>%
-      #   left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
-      # 
-      # # Define Coordinate Reference System: EPSG: 4326
-      # # Transfrom joined object into a simple feature spatial object
-      # st_transform(st_as_sf(t), 4326, use_gdal = T)
+    # Read in requested tabular census data
+    tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
 
-    }else{
+    # Join tabular data with spatial geometry
+    tabular_data %>%
+      left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
 
-      # updateSelectInput(session, "select_attr", selected = '')
+    # Define Coordinate Reference System: EPSG: 4326
+    # Transfrom joined object into a simple feature spatial object
+    st_transform(st_as_sf(t), 4326, use_gdal = T)
 
-      # Read in requested tabular census data
-      tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
-
-      # Join tabular data with spatial geometry
-      tabular_data %>%
-        left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
-
-      # Define Coordinate Reference System: EPSG: 4326
-      # Transfrom joined object into a simple feature spatial object
-      st_transform(st_as_sf(t), 4326, use_gdal = T)
-
-      }
-    
   })
   
-  observeEvent(input$select_category, priority = 100,{
+  # Reset input$select_attr when user changes data topic
+  
+  observeEvent(input$select_category, priority = 1,{
     
     updateSelectInput(session, "select_attr", selected = '')
     
   })
   
-  # observeEvent(input$select_var,priority = 1000,{
-  # 
-  #   updateSelectInput(session, "select_attr", selected = '')
-  # 
-  # })
-  
+  # Reset input$select_attr when user changes data category
   
   observeEvent(selected_data(), {
     reset_sel_attr()
   }, priority = 10)
   
+  # Reset input$select_attr utilizing freezeReactiveValue
+  # Based on solution by Joe Cheng [RStudio]
+  # https://groups.google.com/forum/#!msg/shiny-discuss/gkeuyPAZndM/QYvgI0WbFAAJ
   reset_sel_attr <- function() {
     updateSelectInput(session, "select_attr", selected = '')
     freezeReactiveValue(input, "select_attr")
@@ -537,7 +505,7 @@ server <-  function(input, output, session){
 
   })
 
-  # # Map - Fill Color -----
+  # Map - Fill Color -----
   fc <- reactive({
     
     req(bounds())
@@ -547,7 +515,7 @@ server <-  function(input, output, session){
   })
 
 
-  # # Map - Labels -----
+  # Map - Labels -----
   label_txt <- reactive({
     
     req(filtered_data())
