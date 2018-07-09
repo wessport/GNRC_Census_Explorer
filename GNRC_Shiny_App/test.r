@@ -135,6 +135,7 @@ server <-  function(input, output, session){
     req(input$select_category)
     
     if (input$select_category == 'Pop') {
+      
       selectInput(
         "select_var",
         label = h4("Category:"),
@@ -252,19 +253,73 @@ server <-  function(input, output, session){
     
     req(input$select_var)
     
-    # Read in requested tabular census data
-    tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
+    # # Read in requested tabular census data
+    # tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
+    # 
+    # # Join tabular data with spatial geometry
+    # tabular_data %>%
+    #   left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
+    # 
+    # # Define Coordinate Reference System: EPSG: 4326
+    # # Transfrom joined object into a simple feature spatial object
+    # st_transform(st_as_sf(t), 4326, use_gdal = T)
     
-    # Join tabular data with spatial geometry
-    tabular_data %>% 
-      left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
+    if(is.null(input$select_var)){}
     
-    # Define Coordinate Reference System: EPSG: 4326 
-    # Transfrom joined object into a simple feature spatial object
-    st_transform(st_as_sf(t), 4326, use_gdal = T)
+    else if(input$select_var == ''){
+
+      # # Read in requested tabular census data
+      # tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
+      # 
+      # # Join tabular data with spatial geometry
+      # tabular_data %>%
+      #   left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
+      # 
+      # # Define Coordinate Reference System: EPSG: 4326
+      # # Transfrom joined object into a simple feature spatial object
+      # st_transform(st_as_sf(t), 4326, use_gdal = T)
+
+    }else{
+
+      # updateSelectInput(session, "select_attr", selected = '')
+
+      # Read in requested tabular census data
+      tabular_data <- readRDS(paste("./data/",input$select_var,".rds",sep=""))
+
+      # Join tabular data with spatial geometry
+      tabular_data %>%
+        left_join(geom, by = c("NAME" = "NAME", "Vintage"="Vintage")) -> t
+
+      # Define Coordinate Reference System: EPSG: 4326
+      # Transfrom joined object into a simple feature spatial object
+      st_transform(st_as_sf(t), 4326, use_gdal = T)
+
+      }
     
   })
   
+  observeEvent(input$select_category, priority = 100,{
+    
+    updateSelectInput(session, "select_attr", selected = '')
+    
+  })
+  
+  # observeEvent(input$select_var,priority = 1000,{
+  # 
+  #   updateSelectInput(session, "select_attr", selected = '')
+  # 
+  # })
+  
+  
+  observeEvent(selected_data(), {
+    reset_sel_attr()
+  }, priority = 10)
+  
+  reset_sel_attr <- function() {
+    updateSelectInput(session, "select_attr", selected = '')
+    freezeReactiveValue(input, "select_attr")
+  }
+
   
   # Render Select Variable
   
@@ -341,24 +396,33 @@ server <-  function(input, output, session){
   # Map - Filter Data -----
 
   filtered_data <- reactive({
+    
+    req(selected_data())
+    
+    if(is.null(input$select_attr)){}
+    
+    else if(input$select_attr == ''){}
+    
+    else{
 
-    if (is.null(input$yr)) {
-      y <- 2016
-    }
-    else {
-      y <- input$yr
-    }
-
-    if(is.null(values$geo_level)){
-
-      selected_data() %>%
-        filter(Vintage == y & Level == 'county')
-
-    } else {
-
-      selected_data() %>%
-        filter(Vintage == y & Level == values$geo_level)
-    }
+      if (is.null(input$yr)) {
+        y <- 2016
+      }
+      else {
+        y <- input$yr
+      }
+  
+      if(is.null(values$geo_level)){
+  
+        selected_data() %>%
+          filter(Vintage == y & Level == 'county')
+  
+      } else {
+  
+        selected_data() %>%
+          filter(Vintage == y & Level == values$geo_level)
+      }
+      }
   })
 
   # # Map - Render Leaflet Tiles -----
@@ -402,6 +466,8 @@ server <-  function(input, output, session){
   })
 
   f_data <- reactive({
+    
+    req(selected_data())
 
     if(is.null(values$geo_level)){
 
@@ -415,11 +481,9 @@ server <-  function(input, output, session){
     }
   })
 
-  # observeEvent(input$select_var, {
-  #   reset("select_attr")
-  # })
-
   perc_pop <- reactive({
+    
+    req(input$select_attr)
 
     f_data() %>%
       st_set_geometry(NULL) %>%
@@ -429,6 +493,8 @@ server <-  function(input, output, session){
   })
 
   pp_f <- reactive({
+    
+    req(perc_pop)
 
     if (is.null(input$yr)) {
       y <- 2016
@@ -444,6 +510,8 @@ server <-  function(input, output, session){
   })
 
   min_pp <- reactive({
+    
+    req(perc_pop())
 
     perc_pop()%>%
       subset(!is.na(perc_pop()$pp))%>%
@@ -453,6 +521,8 @@ server <-  function(input, output, session){
 
   max_pp <- reactive({
 
+    req(perc_pop())
+    
     perc_pop()%>%
       subset(!is.na(perc_pop()$pp))%>%
       summarise(maxpp = max(pp))%>%
@@ -460,6 +530,8 @@ server <-  function(input, output, session){
   })
 
   bounds <- reactive({
+    
+    req(max_pp())
 
     c(min_pp(),max_pp())
 
@@ -467,6 +539,8 @@ server <-  function(input, output, session){
 
   # # Map - Fill Color -----
   fc <- reactive({
+    
+    req(bounds())
 
     colorBin("YlOrRd", bounds())(pp_f())
 
@@ -475,6 +549,8 @@ server <-  function(input, output, session){
 
   # # Map - Labels -----
   label_txt <- reactive({
+    
+    req(filtered_data())
 
     if(is.null(input$select_attr)){
 
@@ -506,7 +582,7 @@ server <-  function(input, output, session){
 
   })
 
-  observe({
+  observe(
 
     leafletProxy("mymap", data = filtered_data()) %>%
       clearShapes() %>%
@@ -526,9 +602,11 @@ server <-  function(input, output, session){
         baseGroups = c('Carto DB', 'OSM','Esri World Imagery'),
         overlayGroups = c('Places','Boundary'),
         options = layersControlOptions(collapsed = TRUE)
-      )
+      ),
+    
+    priority = -1000
 
-  })
+  )
 
   # observe({
   # 
@@ -547,11 +625,11 @@ server <-  function(input, output, session){
   #     )
   # })
 
-  # output$test <- renderPrint({
-  #   
-  #   input$select_attr
-  #   
-  # })
+  output$test <- renderPrint({
+
+    input$select_attr
+
+  })
   
   
 }
