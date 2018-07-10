@@ -143,7 +143,8 @@ ui <- dashboardPage(
               column(2, offset = 1, uiOutput("plot_filter_bg"))
             ),
           
-          fluidRow(column(12,h2(htmlOutput('vbText')))),
+          fluidRow(column(9,h2(htmlOutput('vbText'))),
+                   column(3,uiOutput("slider_period"))),
           
           fluidRow(
             valueBoxOutput("totalChangeBox"),
@@ -506,9 +507,10 @@ server <-  function(input, output, session){
     f_data() %>%
       st_set_geometry(NULL) %>%
       ungroup() %>%
-      mutate(pp = (get(input$select_attr))/(tp()$total_est)*100)
+      mutate(pp = (get(input$select_attr))/(tp()$total_est)*100)%>%
+      mutate(pp = replace(pp, is.infinite(pp), NA))
     
-  })
+  }) 
   
   pp_f <- reactive({
     
@@ -826,6 +828,14 @@ server <-  function(input, output, session){
   
   # Data Period Statistics -----
   
+  output$slider_period <- renderUI({
+    
+    req(input$selected_cfilter)
+    
+    sliderInput('period',NULL,2011,2016,value=c(2011,2016), sep = '')
+    
+    })
+  
   f_vi_all <- reactive({
 
     req(input$selected_cfilter)
@@ -834,7 +844,8 @@ server <-  function(input, output, session){
       subset((!is.na(plot_data()[,5])))%>%
       filter(Vintage == min(Vintage))%>%
       ungroup() %>%
-      summarise(avg = mean(get(input$select_attr)))%>%
+      # summarise(avg = mean(get(input$select_attr)))%>%
+      summarise(avg = mean(pp))%>%
       select(avg)
 
   })
@@ -847,7 +858,8 @@ server <-  function(input, output, session){
       subset((!is.na(plot_data()[,5])))%>%
       filter(Vintage == min(Vintage)) %>%
       ungroup()%>%
-      select(input$select_attr)
+      # select(input$select_attr)
+      select(pp)
 
   })
 
@@ -859,7 +871,8 @@ server <-  function(input, output, session){
       subset((!is.na(plot_data()[,5])))%>%
       filter(Vintage == max(Vintage))%>%
       ungroup() %>%
-      summarise(avg = mean(get(input$select_attr)))%>%
+      # summarise(avg = mean(get(input$select_attr)))%>%
+      summarise(avg = mean(pp))%>%
       select(avg)
 
   })
@@ -872,107 +885,130 @@ server <-  function(input, output, session){
       subset((!is.na(plot_data()[,5])))%>%
       filter(Vintage == max(Vintage)) %>%
       ungroup()%>%
-      select(input$select_attr)
+      # select(input$select_attr)
+      select(pp)
 
   })
 
   f_minGain_all <- reactive({
 
     req(input$selected_cfilter)
+    
+    if(all(is.na(plot_data()[,5]))){NA} else {
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
       group_by(NAME) %>%
-      select(NAME,input$select_attr,Vintage) %>%
-      mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      select(NAME,pp,Vintage) %>%
+      # select(NAME,input$select_attr,Vintage) %>%
+      # mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      mutate(diff = lag(pp, default = pp[[1]]) - pp)%>%
       summarise(mindiff = min(diff[Vintage<2016]))%>%
       summarise(meanMinDiff = mean(mindiff))%>%
       ungroup()%>%
       select(meanMinDiff) -> fmga
 
-    round(fmga,3)
+    round(fmga,3)}
 
   })
 
   f_minGain_solo <- reactive({
 
     req(input$selected_cfilter)
+    
+    if(all(is.na(plot_data()[,5]))){NA} else {
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
       group_by(NAME) %>%
       filter(Level == values$geo_level) %>%
-      select(input$select_attr,Vintage) %>%
-      mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      select(NAME,pp,Vintage) %>%
+      # select(NAME,input$select_attr,Vintage) %>%
+      # mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      mutate(diff = lag(pp, default = pp[[1]]) - pp)%>%
       summarise(mindiff = min(diff[Vintage<2016]))%>%
       ungroup()%>%
       select(mindiff) -> fmgs
 
-    round(fmgs,3)
+    round(fmgs,3)}
 
   })
 
   f_maxGain_all <- reactive({
 
     req(input$selected_cfilter)
+    
+    if(all(is.na(plot_data()[,5]))){NA} else {
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
       group_by(NAME) %>%
-      select(NAME,input$select_attr,Vintage) %>%
-      mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      select(NAME,pp,Vintage) %>%
+      # select(NAME,input$select_attr,Vintage) %>%
+      # mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      mutate(diff = lag(pp, default = pp[[1]]) - pp)%>%
       summarise(maxdiff = max(diff[Vintage<2016]))%>%
       summarise(meanmaxDiff = mean(maxdiff))%>%
       ungroup()%>%
       select(meanmaxDiff) -> fmga
 
     round(fmga,3)
-
+}
   })
 
   f_maxGain_solo <- reactive({
 
     req(input$selected_cfilter)
+    
+    if(all(is.na(plot_data()[,5]))){NA} else {
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
       group_by(NAME) %>%
       filter(Level == values$geo_level) %>%
-      select(input$select_attr,Vintage) %>%
-      mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      select(NAME,pp,Vintage) %>%
+      # select(NAME,input$select_attr,Vintage) %>%
+      # mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
+      mutate(diff = lag(pp, default = pp[[1]]) - pp)%>%
       summarise(maxdiff = max(diff[Vintage<2016]))%>%
       ungroup()%>%
       select(maxdiff) -> fmgs
 
-    round(fmgs,3)
+    round(fmgs,3)}
 
   })
 
   f_averageValue_all <- reactive({
 
     req(input$selected_cfilter)
+    
+    if(all(is.na(plot_data()[,5]))){NA} else {
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
       ungroup()%>%
-      summarise(avgVal = mean(get(input$select_attr)))%>%
+      # summarise(avgVal = mean(get(input$select_attr)))%>%
+      summarise(avgVal = mean(pp))%>%
       select(avgVal) -> av
 
-    round(av,3)
+    round(av,3)}
 
   })
 
   f_averageValue_solo <- reactive({
 
     req(input$selected_cfilter)
+    
+    if(all(is.na(plot_data()[,5]))){NA} else {
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
       group_by(NAME) %>%
-      summarise(avgVal = mean(get(input$select_attr)))%>%
+      # summarise(avgVal = mean(get(input$select_attr)))%>%
+      summarise(avgVal = mean(pp))%>%
       select(avgVal) -> av
 
-    round(av,3)
+    round(av,3)}
 
   })
 
@@ -1083,7 +1119,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      total_change(), "Total Change (2011-2016)", icon = icon("signal"),
+      total_change(), paste0("Total Change (",input$period[1],"-",input$period[2]), icon = icon("signal"),
       color = "blue", width = 3
     )
   })
@@ -1093,7 +1129,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      paste(perc_change(),'%',sep=''), "Percent Change (2011-2016)", icon = icon("percent"),
+      paste(perc_change(),'%',sep=''), paste0("Percent Change (",input$period[1],"-",input$period[2]), icon = icon("percent"),
       color = "blue", width = 3
     )
   })
@@ -1103,7 +1139,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      roc(), "Rate of Change (2011-2016)", icon = icon("hourglass-half",lib = "font-awesome"),
+      roc(), paste0("Rate of Change (",input$period[1],"-",input$period[2]), icon = icon("hourglass-half",lib = "font-awesome"),
       color = "purple", width = 3
     )
   })
@@ -1113,7 +1149,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      valueBoxVal$minGain, "Minimum Gain (2011-2016)", icon = icon("angle-up", lib = "font-awesome"),
+      valueBoxVal$minGain, paste0("Minimum Gain (",input$period[1],"-",input$period[2]), icon = icon("angle-up", lib = "font-awesome"),
       color = "green", width = 3
     )
   })
@@ -1123,7 +1159,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      valueBoxVal$maxGain, "Max Gain (2011-2016)", icon = icon("angle-double-up", lib = "font-awesome"),
+      valueBoxVal$maxGain, paste0("Max Gain (",input$period[1],"-",input$period[2]), icon = icon("angle-double-up", lib = "font-awesome"),
       color = "green", width = 3
     )
   })
@@ -1133,7 +1169,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      valueBoxVal$averageValue, "Average Value (2011-2016)", icon = icon("equalizer",lib = "glyphicon"),
+      valueBoxVal$averageValue, paste0("Average Value (",input$period[1],"-",input$period[2]), icon = icon("equalizer",lib = "glyphicon"),
       color = "purple", width = 3
     )
   })
@@ -1666,13 +1702,11 @@ server <-  function(input, output, session){
   
   
 # Test / Trouble shooting
-output$test <- renderPrint({
-
-  perc_pop() %>%
-    group_by(NAME)%>%
-    filter(Level == values$geo_level & NAME == input$selected_cfilter)
-  
-})
+# output$test <- renderPrint({
+# 
+#   input$period[1]
+# 
+# })
 
 }
 
