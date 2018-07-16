@@ -33,7 +33,7 @@ library(viridis)
 # library(multiscales)
 # library(colorspace)
 
-#Global -----
+# Global -----
 
 # Import data
 places <- readRDS("./data/places.rds")
@@ -41,12 +41,6 @@ geom <- readRDS("./data/geometry.rds")
 total_pop <- readRDS("./data/Total Population.rds")
 colnames(total_pop)[5] <- 'total_est'
 
-# # Display tab content in dashboardBody()with menuItem
-# convertMenuItem <- function(mi,tabName) {
-#   mi$children[[1]]$attribs['data-toggle']="tab"
-#   mi$children[[1]]$attribs['data-value'] = tabName
-#   mi
-# }
 
 # UI ----------------------------------------------------------------
 
@@ -259,8 +253,6 @@ server <-  function(input, output, session){
           'Household type including living alone white alone nothispanic or latino',
           'Household income in the past 12 months',
           'Housing Units',
-          'Median monthly housing costs dollars',
-          'Median value dollars',
           'Monthly housing costs',
           'Mortage status and selected monthly owner costs',
           'Occupancy status',
@@ -504,11 +496,35 @@ server <-  function(input, output, session){
     
     req(input$select_attr)
     
-    f_data() %>%
-      st_set_geometry(NULL) %>%
-      ungroup() %>%
-      mutate(pp = (get(input$select_attr))/(tp()$total_est)*100)%>%
-      mutate(pp = replace(pp, is.infinite(pp), NA))
+    if(input$select_var == 'Diversity Indices'){
+      
+      f_data() %>%
+        st_set_geometry(NULL) %>%
+        ungroup() %>%
+        mutate(pp = get(input$select_attr))%>%
+        mutate(pp = replace(pp, is.infinite(pp), NA))
+      
+    }
+    
+    else if(input$select_category == 'Housing'){
+
+      f_data() %>%
+        st_set_geometry(NULL) %>%
+        ungroup() %>%
+        mutate(pp = (get(input$select_attr))/(get('Total estimate'))*100)%>%
+        mutate(pp = replace(pp, is.infinite(pp), NA))
+
+    }
+
+    else {
+    
+      f_data() %>%
+        st_set_geometry(NULL) %>%
+        ungroup() %>%
+        mutate(pp = (get(input$select_attr))/(tp()$total_est)*100)%>%
+        mutate(pp = replace(pp, is.infinite(pp), NA))
+      
+      }
     
   }) 
   
@@ -579,7 +595,17 @@ server <-  function(input, output, session){
       
       paste("<strong>", 'Attr default', "</strong>", sep = '')
       
-    } else {
+    } else if (input$select_var == 'Diversity Indices'){
+      
+      filtered_data() %>%
+        st_set_geometry(NULL) %>%
+        pull("NAME") -> labels
+      
+      paste("<strong>",labels,"</strong><br>",input$select_attr,": ",round(pp_f(),2),sep = '')
+      
+    } 
+    
+    else {
       
       filtered_data() %>%
         st_set_geometry(NULL) %>%
