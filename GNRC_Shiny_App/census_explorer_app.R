@@ -746,15 +746,26 @@ server <-  function(input, output, session){
       # req(fc())
       req(pal())
       
-      # vals <- round(((filtered_data()[[input$select_attr]])/tp()$total_est)*100,3)
+      if(input$select_var == 'Diversity Indices'){
+        
+        title_value <- 'Diversity Indice'
+      
+      } else if (input$select_category == 'Housing'){
+         
+        title_value <- 'Percent of Houses' 
+        
+      } else {
+        
+        title_value <- 'Percent of Pop.'
+        
+      }
 
       leafletProxy("mymap", data = filtered_data()) %>%
         clearControls() %>%
         addLegend("bottomright",
                   pal = pal(),
-                  # values = ~get(input$select_attr),
                   values = round(pp_f(),2),
-                  title = "Count/Total Pop.",
+                  title = title_value,
                   opacity = 0.5,
                   labFormat = function(type, cuts, p) {
                     n = length(cuts)
@@ -1564,9 +1575,23 @@ server <-  function(input, output, session){
     if(input$selected_plot == 'Scatter Plot'){
       
     key <- row.names(plot_data())
+    
+    if(input$select_var == 'Diversity Indices'){
 
-    y <- list(
-      title = "Percent of Total Pop.")
+      y <- list(
+        title = 'Diversity Indice')
+      
+    } else if (input$select_category == 'Housing'){
+
+      y <- list(
+        title = 'Percent of Houses')
+      
+    } else {
+      
+      y <- list(
+        title = 'Percent of Pop.')
+      
+    }
 
     plot_data() %>%
       plot_ly(
