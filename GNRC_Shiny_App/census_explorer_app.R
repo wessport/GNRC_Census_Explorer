@@ -24,7 +24,6 @@ library(rgdal)
 library(shiny)
 library(shinydashboard)
 library(shinycssloaders)
-library(shinyjs)
 library(sf)
 library(tidyverse)
 library(viridis)
@@ -79,13 +78,10 @@ ui <- dashboardPage(
       tags$head(tags$style(".skin-blue a#downloadData.btn.btn-default.shiny-download-link.butt.shiny-bound-output { color: #444; }"))
       
     )
-    
-    
   ),
   
   # UI Body ----
   dashboardBody(
-    useShinyjs(),
     
     tags$head( 
       tags$style(HTML(".main-sidebar { font-size: 14px; }")) #change the font size to 14
