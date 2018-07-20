@@ -11,7 +11,7 @@
 #                                                             #
 #                http://shiny.rstudio.com/                    #
 #                                                             #
-#               Last Updated: 03-JULY-2018                    #
+#               Last Updated: 20-JULY-2018                    #
 #                                                             #
 ###############################################################
 
@@ -28,10 +28,6 @@ library(shinyjs)
 library(sf)
 library(tidyverse)
 library(viridis)
-
-# library(ggplot2)
-# library(multiscales)
-# library(colorspace)
 
 # Global -----
 
@@ -54,8 +50,6 @@ ui <- dashboardPage(
   dashboardSidebar(
     width = 350,
     sidebarMenu(
-      
-      # style = "position: fixed; overflow: visible; overflow-y: scroll",
   
       menuItem("Map & Plot",tabName = "map", icon = icon("map")),
       selectInput(
@@ -83,8 +77,6 @@ ui <- dashboardPage(
       uiOutput("download_dt"),
 
       tags$head(tags$style(".skin-blue a#downloadData.btn.btn-default.shiny-download-link.butt.shiny-bound-output { color: #444; }"))
-      
-      # menuItem("Bivariate Map", tabName = "bmap", icon = icon("map"))
       
     )
     
@@ -154,20 +146,12 @@ ui <- dashboardPage(
         
           verbatimTextOutput("test")
         
-        
       ),
       
       tabItem(tabName = "dt",
               box(
                 uiOutput("dt"),status = 'warning', width = 12)
       )
-      
-      # tabItem(tabName = 'bmap',
-      #         box(
-      #           uiOutput('bivariateSelection'),
-      #           plotlyOutput("bmap") %>% withSpinner(type = getOption("spinner.type", default = 5))
-      #         )
-      # )
     )
   )
 )
@@ -504,6 +488,14 @@ server <-  function(input, output, session){
         mutate(pp = get(input$select_attr))%>%
         mutate(pp = replace(pp, is.infinite(pp), NA))
       
+    } else if (input$select_var == 'Total Population'){
+      
+      f_data() %>%
+        st_set_geometry(NULL) %>%
+        ungroup() %>%
+        mutate(pp = get(input$select_attr))%>%
+        mutate(pp = replace(pp, is.infinite(pp), NA))
+      
     }
     
     else if(input$select_category == 'Housing'){
@@ -595,7 +587,7 @@ server <-  function(input, output, session){
       
       paste("<strong>", 'Attr default', "</strong>", sep = '')
       
-    } else if (input$select_var == 'Diversity Indices'){
+    } else if (input$select_var == 'Diversity Indices' | input$select_var == 'Total Population'){
       
       filtered_data() %>%
         st_set_geometry(NULL) %>%
@@ -661,7 +653,6 @@ server <-  function(input, output, session){
         data = places,
         fillOpacity = 0,
         weight = 2,
-        #stroke = T,
         dashArray = '2',
         color = "purple",
         opacity = 0.5,
@@ -717,13 +708,10 @@ server <-  function(input, output, session){
 
     if(q_length>unique_q_length){
 
-      # colorBin("YlOrRd", filtered_data()[[input$select_attr]])
       colorBin("YlOrRd", bounds())
 
     } else{
 
-      # colorQuantile("YlOrRd", filtered_data()[[input$select_attr]])
-      # colorQuantile("YlOrRd",  bounds()(pp_f()))
       colorBin("YlOrRd", bounds())
     }
 
@@ -743,13 +731,16 @@ server <-  function(input, output, session){
 
     } else {
 
-      # req(fc())
       req(pal())
       
       if(input$select_var == 'Diversity Indices'){
         
         title_value <- 'Diversity Indice'
       
+      } else if (input$select_var == 'Total Population'){
+        
+        title_value <- 'Total Population'
+        
       } else if (input$select_category == 'Housing'){
          
         title_value <- 'Percent of Houses' 
@@ -867,7 +858,7 @@ server <-  function(input, output, session){
   
   output$slider_period <- renderUI({
     
-    req(input$selected_cfilter)
+    req(input$select_attr)
     
     sliderInput('period',NULL,2011,2016,value=c(2011,2016), sep = '')
     
@@ -879,9 +870,8 @@ server <-  function(input, output, session){
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
-      filter(Vintage == min(Vintage))%>%
+      filter(Vintage == input$period[1])%>%
       ungroup() %>%
-      # summarise(avg = mean(get(input$select_attr)))%>%
       summarise(avg = mean(pp))%>%
       select(avg)
 
@@ -890,12 +880,12 @@ server <-  function(input, output, session){
   f_vi_solo <- reactive({
 
     req(input$selected_cfilter)
+
     
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
-      filter(Vintage == min(Vintage)) %>%
+      filter(Vintage == input$period[1]) %>%
       ungroup()%>%
-      # select(input$select_attr)
       select(pp)
 
   })
@@ -906,9 +896,8 @@ server <-  function(input, output, session){
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
-      filter(Vintage == max(Vintage))%>%
+      filter(Vintage == input$period[2]) %>%
       ungroup() %>%
-      # summarise(avg = mean(get(input$select_attr)))%>%
       summarise(avg = mean(pp))%>%
       select(avg)
 
@@ -920,9 +909,8 @@ server <-  function(input, output, session){
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
-      filter(Vintage == max(Vintage)) %>%
+      filter(Vintage == input$period[2]) %>%
       ungroup()%>%
-      # select(input$select_attr)
       select(pp)
 
   })
@@ -932,18 +920,17 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
     
     if(all(is.na(plot_data()[,5]))){NA} else {
-
-    plot_data() %>%
-      subset((!is.na(plot_data()[,5])))%>%
-      group_by(NAME) %>%
-      select(NAME,pp,Vintage) %>%
-      # select(NAME,input$select_attr,Vintage) %>%
-      # mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
-      mutate(diff = lag(pp, default = pp[[1]]) - pp)%>%
-      summarise(mindiff = min(diff[Vintage<2016]))%>%
-      summarise(meanMinDiff = mean(mindiff))%>%
-      ungroup()%>%
-      select(meanMinDiff) -> fmga
+      
+      plot_data() %>%
+        subset((!is.na(plot_data()[,5]))) %>%
+        filter(Vintage >= input$period[1] & Vintage <= input$period[2]) %>%
+        group_by(NAME) %>%
+        select(NAME,pp,Vintage) %>%
+        mutate(diff = lag(pp, default = pp[[1]]) - pp) %>%
+        summarise(mindiff = min(diff[Vintage<input$period[2]])) %>%
+        summarise(meanMinDiff = mean(mindiff)) %>%
+        ungroup() %>%
+        select(meanMinDiff) -> fmga
 
     round(fmga,3)}
 
@@ -957,13 +944,12 @@ server <-  function(input, output, session){
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
+      filter(Vintage >= input$period[1] & Vintage <= input$period[2])%>%
       group_by(NAME) %>%
       filter(Level == values$geo_level) %>%
       select(NAME,pp,Vintage) %>%
-      # select(NAME,input$select_attr,Vintage) %>%
-      # mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
       mutate(diff = lag(pp, default = pp[[1]]) - pp)%>%
-      summarise(mindiff = min(diff[Vintage<2016]))%>%
+      summarise(mindiff = min(diff[Vintage<input$period[2]])) %>%
       ungroup()%>%
       select(mindiff) -> fmgs
 
@@ -979,12 +965,11 @@ server <-  function(input, output, session){
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
+      filter(Vintage >= input$period[1] & Vintage <= input$period[2])%>%
       group_by(NAME) %>%
       select(NAME,pp,Vintage) %>%
-      # select(NAME,input$select_attr,Vintage) %>%
-      # mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
       mutate(diff = lag(pp, default = pp[[1]]) - pp)%>%
-      summarise(maxdiff = max(diff[Vintage<2016]))%>%
+      summarise(maxdiff = max(diff[Vintage<input$period[2]])) %>%
       summarise(meanmaxDiff = mean(maxdiff))%>%
       ungroup()%>%
       select(meanmaxDiff) -> fmga
@@ -1001,13 +986,12 @@ server <-  function(input, output, session){
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
+      filter(Vintage >= input$period[1] & Vintage <= input$period[2])%>%
       group_by(NAME) %>%
       filter(Level == values$geo_level) %>%
       select(NAME,pp,Vintage) %>%
-      # select(NAME,input$select_attr,Vintage) %>%
-      # mutate(diff = lag(get(input$select_attr), default = get(input$select_attr)[[1]]) - get(input$select_attr))%>%
       mutate(diff = lag(pp, default = pp[[1]]) - pp)%>%
-      summarise(maxdiff = max(diff[Vintage<2016]))%>%
+      summarise(maxdiff = max(diff[Vintage<input$period[2]])) %>%
       ungroup()%>%
       select(maxdiff) -> fmgs
 
@@ -1023,8 +1007,8 @@ server <-  function(input, output, session){
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
+      filter(Vintage >= input$period[1] & Vintage <= input$period[2])%>%
       ungroup()%>%
-      # summarise(avgVal = mean(get(input$select_attr)))%>%
       summarise(avgVal = mean(pp))%>%
       select(avgVal) -> av
 
@@ -1040,8 +1024,8 @@ server <-  function(input, output, session){
 
     plot_data() %>%
       subset((!is.na(plot_data()[,5])))%>%
+      filter(Vintage >= input$period[1] & Vintage <= input$period[2])%>%
       group_by(NAME) %>%
-      # summarise(avgVal = mean(get(input$select_attr)))%>%
       summarise(avgVal = mean(pp))%>%
       select(avgVal) -> av
 
@@ -1052,7 +1036,7 @@ server <-  function(input, output, session){
   # Value Box Values -----
   valueBoxVal <- reactiveValues()
 
-  observeEvent(c(input$select_attr,input$selected_cfilter,input$selected_tfilter,input$selected_bgfilter),{
+  observeEvent(c(input$select_attr,input$period,input$selected_cfilter,input$selected_tfilter,input$selected_bgfilter),{
     
     req(input$select_attr)
 
@@ -1156,7 +1140,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      total_change(), paste0("Total Change (",input$period[1],"-",input$period[2]), icon = icon("signal"),
+      total_change(), paste0("Total Change (",input$period[1],"-",input$period[2],')'), icon = icon("signal"),
       color = "blue", width = 3
     )
   })
@@ -1166,7 +1150,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      paste(perc_change(),'%',sep=''), paste0("Percent Change (",input$period[1],"-",input$period[2]), icon = icon("percent"),
+      paste(perc_change(),'%',sep=''), paste0("Percent Change (",input$period[1],"-",input$period[2],')'), icon = icon("percent"),
       color = "blue", width = 3
     )
   })
@@ -1176,7 +1160,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      roc(), paste0("Rate of Change (",input$period[1],"-",input$period[2]), icon = icon("hourglass-half",lib = "font-awesome"),
+      roc(), paste0("Rate of Change (",input$period[1],"-",input$period[2],')'), icon = icon("hourglass-half",lib = "font-awesome"),
       color = "purple", width = 3
     )
   })
@@ -1186,7 +1170,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      valueBoxVal$minGain, paste0("Minimum Gain (",input$period[1],"-",input$period[2]), icon = icon("angle-up", lib = "font-awesome"),
+      valueBoxVal$minGain, paste0("Minimum Gain (",input$period[1],"-",input$period[2],')'), icon = icon("angle-up", lib = "font-awesome"),
       color = "green", width = 3
     )
   })
@@ -1196,7 +1180,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      valueBoxVal$maxGain, paste0("Max Gain (",input$period[1],"-",input$period[2]), icon = icon("angle-double-up", lib = "font-awesome"),
+      valueBoxVal$maxGain, paste0("Max Gain (",input$period[1],"-",input$period[2],')'), icon = icon("angle-double-up", lib = "font-awesome"),
       color = "green", width = 3
     )
   })
@@ -1206,7 +1190,7 @@ server <-  function(input, output, session){
     req(input$selected_cfilter)
 
     valueBox(
-      valueBoxVal$averageValue, paste0("Average Value (",input$period[1],"-",input$period[2]), icon = icon("equalizer",lib = "glyphicon"),
+      valueBoxVal$averageValue, paste0("Average Value (",input$period[1],"-",input$period[2],')'), icon = icon("equalizer",lib = "glyphicon"),
       color = "purple", width = 3
     )
   })
@@ -1237,7 +1221,6 @@ server <-  function(input, output, session){
 
   plot_data <- reactive({
 
-    # req(table_data())
     req(perc_pop())
 
     # User selects County
@@ -1246,7 +1229,6 @@ server <-  function(input, output, session){
 
       if(input$selected_cfilter ==''){
 
-      # table_data() %>%
       perc_pop() %>%
         filter(Level == values$geo_level) %>%
         group_by(NAME)
@@ -1581,6 +1563,11 @@ server <-  function(input, output, session){
       y <- list(
         title = 'Diversity Indice')
       
+    } else if(input$select_var == 'Total Population'){
+      
+      y <- list(
+        title = 'Total Population')
+    
     } else if (input$select_category == 'Housing'){
 
       y <- list(
@@ -1596,7 +1583,6 @@ server <-  function(input, output, session){
     plot_data() %>%
       plot_ly(
         x = ~ Vintage,
-        # y = ~ get(input$select_attr),
         y = ~ pp,
         key = ~key,
         color = ~ NAME,
@@ -1613,7 +1599,6 @@ server <-  function(input, output, session){
         p %>% 
           plotly::add_trace(p, 
                             x = ~ Vintage,
-                            # y = fitted(lm(get(input$select_attr) ~ Vintage, plot_data())),
                             y = fitted(lm(pp ~ Vintage, plot_data())),
                             name = 'Trend line',
                             line = list(color = 'rgb(0, 0, 0)', width = 2, dash = 'dash')) -> p
@@ -1651,7 +1636,6 @@ server <-  function(input, output, session){
             type = 'bar',
             orientation = 'h',
             marker = list(
-              # color = 'rgba(50, 171, 96, 0.6)',
               color = 'rgba(60, 141, 188, 1.0)',
               line = list(color = 'rgba(60, 141, 188, 1.0)', width = 1)
             )
@@ -1667,7 +1651,6 @@ server <-  function(input, output, session){
               b = 70
             )
           )
-      
     }
   })
   
@@ -1699,63 +1682,9 @@ server <-  function(input, output, session){
     
   })
   
-  # # Bivariate Map -----
-  # 
-  # output$bivariateSelection <- renderUI({ 
-  #   
-  #   req(input$select_var)
-  #   
-  #   attr <- colnames(selected_data())
-  #   
-  #   selectInput(
-  #     "select_attr_2",
-  #     label = h4("Variable:"),
-  #     c(attr[!attr %in% c("GEOID","NAME","Vintage","Level","geometry")])
-  #   )
-  # })
-  # 
-  # output$bmap <-  renderPlotly({
-  #   
-  #   if(values$geo_level == 'county'){req(!is.null(input$selected_cfilter))}
-  #   if(values$geo_level == 'tract'){req(!is.null(input$selected_tfilter))}
-  #   if(values$geo_level == 'block group'){req(!is.null(input$selected_bgfilter))}
-  #   else{req(input$select_attr)}
-  #   
-  #   a <- split(filtered_data()[input$select_attr]%>%st_set_geometry(NULL), seq(filtered_data()[input$select_attr]%>%st_set_geometry(NULL)))
-  # 
-  #   b <- split(filtered_data()[input$select_attr_2]%>%st_set_geometry(NULL), seq(filtered_data()[input$select_attr_2]%>%st_set_geometry(NULL)))
-  #   
-  #   g <- ggplot(filtered_data(), aes(fill = zip(a, b))) +
-  #     geom_sf(color = "gray30", size = 0.2) +
-  #     # coord_sf(xlim = c(-88, -79.8), ylim = c(24.1, 31.2), datum = NA) +
-  #     bivariate_scale("fill",
-  #                     pal_vsup_viridis(),
-  #                     name = c("median house\nvalues ($1K)", "uncertainty"),
-  #                     # limits = list(c(0, 400), c(0, 0.4)),
-  #                     limits = list(c(0, 2000), c(0, 1)),
-  #                     # breaks = list(waiver(), c(0.05, 0.15, 0.25, 0.35)),
-  #                     breaks = list(waiver(), waiver()),
-  #                     # labels = list(waiver(), scales::percent),
-  #                     labels = list(waiver(), scales::percent),
-  #                     guide = "colourfan"
-  #     ) +
-  #     theme_void() +
-  #     theme(
-  #       legend.key.size = grid::unit(0.8, "cm"),
-  #       legend.title.align = 0.5,
-  #       legend.justification = c(0, 0),
-  #       legend.position = c(0.1, 0.1)
-  #     )
-  #   
-  #   ggplotly(g)
-  #   
-  # })
-  
-  
 # Test / Trouble shooting
 # output$test <- renderPrint({
 # 
-#   input$period[1]
 # 
 # })
 
