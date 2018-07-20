@@ -1,14 +1,14 @@
 # GNRC_Census_Explorer
 
-A Shiny web application for visualizing American Community Survey data in the Greater Nashville Region.
+#### A Shiny web application for visualizing American Community Survey data in the Greater Nashville Region.
 
-
+![alt txt](https://res.cloudinary.com/wessport/image/upload/v1532117255/GNRC_App_ch1b1d.png "GNRC Census Explorer")
 
 A live version of the app can be viewed here:
 
 https://wessport865.shinyapps.io/GNRC_Shiny_App/
 
-With apps hosted by [shinyapps.io](https://www.shinyapps.io/) there's a limit on the number of application usage hours. If the app doesn't open, the monthly limit has likely been reached.  
+:loudspeaker: This app is hosted by [shinyapps.io](https://www.shinyapps.io/) using their free hosting service which is restrticted by a limit on the number of application usage hours :hourglass: . If the app doesn't open, the monthly limit has likely been reached.  
 
 # Reference
 Head to [American Community Survey (ACS)](https://www.census.gov/programs-surveys/acs/) to learn more about using ACS data and how it's collected. 
